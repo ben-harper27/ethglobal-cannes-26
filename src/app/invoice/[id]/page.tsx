@@ -5,6 +5,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
 import { StatusBadge } from "@/components/status-badge"
 import { useInvoice } from "@/hooks/use-invoice"
+import { useDynamicContext } from "@dynamic-labs/sdk-react-core"
 import {
   CheckCircle,
   Copy,
@@ -12,18 +13,32 @@ import {
   Loader2,
   ArrowDownToLine,
   ShieldCheck,
+  Wallet,
 } from "lucide-react"
 import { toast } from "sonner"
 import { motion, AnimatePresence } from "framer-motion"
+import {
+  createPublicClient,
+  http,
+  encodeFunctionData,
+  erc20Abi,
+  maxUint256,
+} from "viem"
+import { baseSepolia } from "viem/chains"
 
-type PaymentStep = "idle" | "approving" | "depositing" | "transferring" | "done"
+type PaymentStep = "idle" | "approving" | "signing" | "confirming" | "done"
 
 const steps: { key: PaymentStep; label: string }[] = [
-  { key: "approving", label: "Approving token..." },
-  { key: "depositing", label: "Depositing to privacy pool..." },
-  { key: "transferring", label: "Transferring privately..." },
+  { key: "approving", label: "Approving token for Permit2..." },
+  { key: "signing", label: "Signing deposit..." },
+  { key: "confirming", label: "Confirming on-chain..." },
   { key: "done", label: "Payment complete!" },
 ]
+
+const publicClient = createPublicClient({
+  chain: baseSepolia,
+  transport: http(),
+})
 
 export default function InvoicePage({
   params,
@@ -32,25 +47,102 @@ export default function InvoicePage({
 }) {
   const { id } = use(params)
   const { invoice, isLoading, invalidate } = useInvoice(id)
+  const { primaryWallet } = useDynamicContext()
   const [paymentStep, setPaymentStep] = useState<PaymentStep>("idle")
+  const [txHash, setTxHash] = useState<string | null>(null)
+
+  const isConnected = !!primaryWallet
 
   const handlePay = async () => {
-    if (!invoice) return
+    if (!invoice || !primaryWallet) return
 
-    setPaymentStep("approving")
+    const payerAddress = primaryWallet.address
+    if (!payerAddress) return
 
     try {
-      setPaymentStep("depositing")
+      setPaymentStep("approving")
 
-      const res = await fetch("/api/pay", {
+      // WHY: ensure payer is on Base Sepolia before any transactions
+      const currentChainId = await primaryWallet.getNetwork()
+      if (Number(currentChainId) !== baseSepolia.id) {
+        await primaryWallet.switchNetwork(baseSepolia.id)
+      }
+
+      // WHY: Dynamic's type system doesn't expose getWalletClient on the base Wallet type
+      // but EOA connectors (MetaMask etc.) implement it
+      const connector = primaryWallet.connector as unknown as {
+        getWalletClient(): { signTypedData: (args: unknown) => Promise<string>; sendTransaction: (args: unknown) => Promise<string> }
+      }
+      const walletClient = connector.getWalletClient()
+
+      // Step 1: Prepare the deposit — get typed data from server
+      const prepareRes = await fetch("/api/pay/prepare", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ invoiceId: invoice.id }),
+        body: JSON.stringify({ invoiceId: invoice.id, payerAddress }),
       })
 
-      if (!res.ok) {
-        const data = await res.json()
+      if (!prepareRes.ok) {
+        const data = await prepareRes.json()
+        throw new Error(data.error || "Failed to prepare payment")
+      }
+
+      const { txId, typedData, nonce, deadline, permit2Address } =
+        await prepareRes.json()
+
+      // Step 2: Approve ERC-20 for Permit2 (if needed)
+      const allowance = await publicClient.readContract({
+        address: invoice.tokenAddress as `0x${string}`,
+        abi: erc20Abi,
+        functionName: "allowance",
+        args: [payerAddress as `0x${string}`, permit2Address as `0x${string}`],
+      })
+
+      if (allowance < BigInt(invoice.amountWei)) {
+        const approveTx = await walletClient.sendTransaction({
+          to: invoice.tokenAddress as `0x${string}`,
+          data: encodeFunctionData({
+            abi: erc20Abi,
+            functionName: "approve",
+            args: [permit2Address as `0x${string}`, maxUint256],
+          }),
+        })
+        await publicClient.waitForTransactionReceipt({ hash: approveTx as `0x${string}` })
+      }
+
+      setPaymentStep("signing")
+
+      // Step 3: Sign the Permit2 witness typed data
+      const signature = await walletClient.signTypedData({
+        domain: typedData.domain,
+        types: typedData.types,
+        primaryType: typedData.primaryType,
+        message: typedData.message,
+      })
+
+      setPaymentStep("confirming")
+
+      // Step 4: Submit signature to server
+      const submitRes = await fetch("/api/pay/submit", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          invoiceId: invoice.id,
+          txId,
+          signature,
+          nonce,
+          deadline,
+        }),
+      })
+
+      if (!submitRes.ok) {
+        const data = await submitRes.json()
         throw new Error(data.error || "Payment failed")
+      }
+
+      const submitData = await submitRes.json()
+      if (submitData.txHash) {
+        setTxHash(submitData.txHash)
       }
 
       setPaymentStep("done")
@@ -107,6 +199,16 @@ export default function InvoicePage({
                 {invoice.amount} {invoice.tokenSymbol}
               </span>
             </div>
+            {isPaid && invoice.txHash && (
+              <a
+                href={`https://sepolia.basescan.org/tx/${invoice.txHash}`}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="text-xs text-primary underline"
+              >
+                View transaction on BaseScan
+              </a>
+            )}
           </div>
 
           <AnimatePresence mode="wait">
@@ -167,16 +269,37 @@ export default function InvoicePage({
                 <p className="text-center text-xs text-muted-foreground">
                   No on-chain link between payer and payee
                 </p>
+                {(txHash || invoice.txHash) && (
+                  <a
+                    href={`https://sepolia.basescan.org/tx/${txHash || invoice.txHash}`}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="text-xs text-primary underline"
+                  >
+                    View on BaseScan
+                  </a>
+                )}
               </motion.div>
             )}
           </AnimatePresence>
 
           <div className="flex gap-2">
             {!isPaid && paymentStep === "idle" && (
-              <Button className="flex-1" onClick={handlePay}>
-                <ArrowDownToLine className="mr-2 h-4 w-4" />
-                Pay Now
-              </Button>
+              <>
+                {!isConnected ? (
+                  <div className="flex flex-1 flex-col items-center gap-2 rounded-lg bg-muted p-4">
+                    <Wallet className="h-6 w-6 text-muted-foreground" />
+                    <p className="text-sm text-muted-foreground">
+                      Connect your wallet to pay
+                    </p>
+                  </div>
+                ) : (
+                  <Button className="flex-1" onClick={handlePay}>
+                    <ArrowDownToLine className="mr-2 h-4 w-4" />
+                    Pay Now
+                  </Button>
+                )}
+              </>
             )}
             <Button variant="outline" onClick={copyPaymentLink}>
               <Copy className="mr-2 h-4 w-4" />
