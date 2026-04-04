@@ -38,7 +38,7 @@ export default function CreateInvoicePage() {
           body: JSON.stringify({
             unlinkAddress,
             amount,
-            tokenSymbol: "TEST",
+            tokenSymbol: "USDC",
           }),
         })
 
@@ -113,7 +113,7 @@ export default function CreateInvoicePage() {
                 onChange={(e) => setAmount(e.target.value)}
               />
               <p className="text-xs text-muted-foreground">
-                Token: TEST (Base Sepolia testnet)
+                USDC on Base Sepolia
               </p>
             </div>
 

@@ -3,6 +3,7 @@ import { nanoid } from "nanoid"
 import { store } from "@/lib/store"
 import type { Invoice } from "@/lib/types"
 import { parseUnits } from "viem"
+import { INVOICE_TOKEN } from "@/lib/tokens"
 
 export async function GET(request: Request) {
   const { searchParams } = new URL(request.url)
@@ -20,7 +21,7 @@ export async function GET(request: Request) {
 
 export async function POST(request: Request) {
   const body = await request.json()
-  const { unlinkAddress, amount, tokenSymbol } = body
+  const { unlinkAddress, amount } = body
 
   if (!unlinkAddress || !amount) {
     return NextResponse.json(
@@ -29,14 +30,13 @@ export async function POST(request: Request) {
     )
   }
 
-  const tokenAddress = process.env.TEST_TOKEN_ADDRESS!
-  const amountWei = parseUnits(amount, 18).toString()
+  const amountWei = parseUnits(amount, INVOICE_TOKEN.decimals).toString()
 
   const invoice: Invoice = {
     id: nanoid(12),
     recipientUnlinkAddress: unlinkAddress,
-    tokenAddress,
-    tokenSymbol: tokenSymbol || "TEST",
+    tokenAddress: INVOICE_TOKEN.address,
+    tokenSymbol: INVOICE_TOKEN.symbol,
     amount,
     amountWei,
     status: "pending",

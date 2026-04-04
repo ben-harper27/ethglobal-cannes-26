@@ -72,7 +72,7 @@ export default function DashboardPage() {
               <div className="flex flex-col gap-1">
                 {balances.map((b) => (
                   <p key={b.token} className="text-2xl font-bold">
-                    {formatUnits(BigInt(b.amount), 18)} TEST
+                    {formatUnits(BigInt(b.amount), 6)} USDC
                   </p>
                 ))}
               </div>
