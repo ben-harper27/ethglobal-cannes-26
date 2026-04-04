@@ -69,7 +69,7 @@ export default function InvoicePage({
 
   const isConnected = !!primaryWallet
   const isEth = selectedToken === ETH.address
-  const isCrossToken = invoice
+  const isCrossToken = invoice?.tokenAddress
     ? selectedToken.toLowerCase() !== invoice.tokenAddress.toLowerCase()
     : false
   const steps = isCrossToken ? swapSteps : directSteps

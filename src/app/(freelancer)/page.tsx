@@ -47,8 +47,8 @@ export default function Home() {
           <div className="flex flex-col gap-2">
             <h3 className="font-semibold">Create an invoice</h3>
             <p className="text-sm text-muted-foreground">
-              Set your ENS name and amount. Share the payment link with your
-              client.
+              Connect your wallet, set an amount, and share the payment link
+              with your client.
             </p>
           </div>
           <div className="flex flex-col gap-2">
@@ -61,8 +61,7 @@ export default function Home() {
           <div className="flex flex-col gap-2">
             <h3 className="font-semibold">Withdraw anywhere</h3>
             <p className="text-sm text-muted-foreground">
-              Withdraw to any wallet. Optionally auto-swap to your preferred
-              token.
+              Withdraw your private balance to any wallet address at any time.
             </p>
           </div>
         </div>

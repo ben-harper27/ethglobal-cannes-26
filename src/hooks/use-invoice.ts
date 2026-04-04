@@ -1,8 +1,11 @@
 import { useQuery, useQueryClient } from "@tanstack/react-query"
 import type { Invoice } from "@/lib/types"
 
-const fetcher = (url: string): Promise<Invoice> =>
-  fetch(url).then((res) => res.json())
+const fetcher = async (url: string): Promise<Invoice> => {
+  const res = await fetch(url)
+  if (!res.ok) throw new Error("Invoice not found")
+  return res.json()
+}
 
 export function useInvoice(id: string) {
   const queryClient = useQueryClient()
