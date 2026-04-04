@@ -1,6 +1,6 @@
 import { NextResponse } from "next/server"
 import { store } from "@/lib/store"
-import { getPayerClient } from "@/lib/unlink"
+import { getFreelancerClient, getPayerClient } from "@/lib/unlink"
 
 export async function POST(request: Request) {
   const { invoiceId } = await request.json()
@@ -21,6 +21,10 @@ export async function POST(request: Request) {
 
   try {
     const payer = getPayerClient()
+    const freelancer = getFreelancerClient()
+
+    await payer.ensureRegistered()
+    await freelancer.ensureRegistered()
 
     const approval = await payer.ensureErc20Approval({
       token: invoice.tokenAddress,
