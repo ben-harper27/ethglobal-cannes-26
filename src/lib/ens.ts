@@ -1,10 +1,10 @@
 import { createPublicClient, http } from "viem"
-import { sepolia } from "viem/chains"
+import { mainnet } from "viem/chains"
 import { normalize } from "viem/ens"
 
 const ensClient = createPublicClient({
-  chain: sepolia,
-  transport: http(process.env.ETH_SEPOLIA_RPC_URL),
+  chain: mainnet,
+  transport: http(process.env.ETH_MAINNET_RPC_URL),
 })
 
 export async function resolveEns(name: string): Promise<string | null> {
