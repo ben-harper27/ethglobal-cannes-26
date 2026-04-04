@@ -1,5 +1,6 @@
 import { NextResponse } from "next/server"
 import { createClientFromSeed } from "@/lib/unlink"
+import { INVOICE_TOKEN } from "@/lib/tokens"
 
 export async function POST(request: Request) {
   const { seed, recipientAddress, amount } = await request.json()
@@ -13,11 +14,10 @@ export async function POST(request: Request) {
 
   try {
     const client = createClientFromSeed(seed)
-    const tokenAddress = process.env.TEST_TOKEN_ADDRESS!
 
     const result = await client.withdraw({
       recipientEvmAddress: recipientAddress,
-      token: tokenAddress,
+      token: INVOICE_TOKEN.address,
       amount,
     })
 

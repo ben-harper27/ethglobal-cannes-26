@@ -21,7 +21,7 @@ export default function WithdrawPage() {
   const [txId, setTxId] = useState<string | null>(null)
 
   const currentBalance = balances.length > 0
-    ? formatUnits(BigInt(balances[0].amount), 18)
+    ? formatUnits(BigInt(balances[0].amount), 6)
     : "0"
 
   const handleWithdraw = async (e: React.FormEvent) => {
@@ -40,7 +40,7 @@ export default function WithdrawPage() {
     setIsSubmitting(true)
 
     try {
-      const amountWei = parseUnits(amount, 18).toString()
+      const amountWei = parseUnits(amount, 6).toString()
 
       const res = await fetch("/api/withdraw", {
         method: "POST",
@@ -113,7 +113,7 @@ export default function WithdrawPage() {
             {balancesLoading ? (
               <Loader2 className="mt-1 h-5 w-5 animate-spin text-muted-foreground" />
             ) : (
-              <p className="text-2xl font-bold">{currentBalance} TEST</p>
+              <p className="text-2xl font-bold">{currentBalance} USDC</p>
             )}
           </div>
 
