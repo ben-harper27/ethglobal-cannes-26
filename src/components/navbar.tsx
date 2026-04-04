@@ -22,6 +22,12 @@ export function Navbar() {
           >
             Dashboard
           </Link>
+          <Link
+            href="/withdraw"
+            className="text-muted-foreground transition-colors hover:text-foreground"
+          >
+            Withdraw
+          </Link>
         </nav>
       </div>
     </header>
