@@ -45,9 +45,9 @@ export async function GET(request: Request) {
 
     const [amountIn] = result.result as [bigint, bigint, number, bigint]
 
-    const withSlippage = (amountIn * BigInt(105)) / BigInt(100)
+    const withSlippage = (amountIn * BigInt(102)) / BigInt(100)
     // WHY: for ETH payments, include gas buffer for burner's 5 on-chain txs
-    const GAS_BUFFER = BigInt("5000000000000000") // 0.005 ETH
+    const GAS_BUFFER = BigInt("3000000000000000") // 0.003 ETH
     const isEthPayment = searchParams.get("tokenIn")?.toLowerCase() === "0x4200000000000000000000000000000000000006"
     const totalRequired = isEthPayment ? withSlippage + GAS_BUFFER : withSlippage
 

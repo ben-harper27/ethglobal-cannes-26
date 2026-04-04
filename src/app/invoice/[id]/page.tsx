@@ -189,8 +189,7 @@ export default function InvoicePage({
       body: JSON.stringify({
         invoiceId: invoice.id,
         action: "create",
-        tokenIn: isEth ? WETH.address : selectedToken,
-        amountIn: sendAmount,
+        payerAddress,
       }),
     })
 
@@ -360,7 +359,7 @@ export default function InvoicePage({
                         ≈ {Number(formatUnits(BigInt(quote.amountInWithSlippage), swapTokenDecimals)).toFixed(6)} {isEth ? "ETH" : PAYMENT_TOKENS.find(t => t.address === selectedToken)?.symbol}
                       </p>
                       <p className="text-muted-foreground/70">
-                        Includes 5% slippage{quote.gasBuffer !== "0" ? " + gas for swap" : ""}
+                        Includes slippage{quote.gasBuffer !== "0" ? " + gas" : ""} — excess refunded
                       </p>
                     </div>
                   ) : null}

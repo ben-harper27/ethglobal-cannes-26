@@ -19,15 +19,115 @@ import { baseSepolia } from "viem/chains"
 import { SWAP_ROUTER, POOL_FEE, WETH } from "@/lib/tokens"
 
 const ENGINE_URL = "https://staging-api.unlink.xyz"
+const GAS_RESERVE = BigInt("3000000000000000") // 0.003 ETH
 
 const swapRouterAbi = parseAbi([
   "function exactOutputSingle((address tokenIn, address tokenOut, uint24 fee, address recipient, uint256 amountOut, uint256 amountInMaximum, uint160 sqrtPriceLimitX96)) external payable returns (uint256 amountIn)",
 ])
 
-const wethAbi = parseAbi(["function deposit() external payable"])
+const wethAbi = parseAbi([
+  "function deposit() external payable",
+  "function withdraw(uint256 amount) external",
+])
 
-// WHY: in-memory store for burner private keys — short-lived, cleaned up after use
-const burnerKeys = new Map<string, `0x${string}`>()
+interface BurnerInfo {
+  privateKey: `0x${string}`
+  payerAddress: string
+}
+
+const burnerStore = new Map<string, BurnerInfo>()
+
+async function refundBurner(
+  burnerInfo: BurnerInfo,
+  tokenIn: string,
+  invoiceToken: string
+) {
+  try {
+    const burnerAccount = privateKeyToAccount(burnerInfo.privateKey)
+    const burnerWalletClient = createWalletClient({
+      account: burnerAccount,
+      chain: baseSepolia,
+      transport: http(process.env.BASE_SEPOLIA_RPC_URL),
+    })
+    const publicClient = createPublicClient({
+      chain: baseSepolia,
+      transport: http(process.env.BASE_SEPOLIA_RPC_URL),
+    })
+
+    const payerAddr = burnerInfo.payerAddress as `0x${string}`
+
+    // Refund any remaining input token (WETH)
+    const inputBalance = await publicClient.readContract({
+      address: tokenIn as `0x${string}`,
+      abi: erc20Abi,
+      functionName: "balanceOf",
+      args: [burnerAccount.address],
+    })
+    if (inputBalance > BigInt(0)) {
+      // WHY: unwrap WETH back to ETH so payer gets native ETH
+      if (tokenIn.toLowerCase() === WETH.address.toLowerCase()) {
+        const unwrapTx = await burnerWalletClient.sendTransaction({
+          to: WETH.address as `0x${string}`,
+          data: encodeFunctionData({
+            abi: wethAbi,
+            functionName: "withdraw",
+            args: [inputBalance],
+          }),
+        })
+        await publicClient.waitForTransactionReceipt({ hash: unwrapTx })
+        console.log(`[refund] unwrapped ${inputBalance} WETH`)
+      } else {
+        const refundTx = await burnerWalletClient.sendTransaction({
+          to: tokenIn as `0x${string}`,
+          data: encodeFunctionData({
+            abi: erc20Abi,
+            functionName: "transfer",
+            args: [payerAddr, inputBalance],
+          }),
+        })
+        await publicClient.waitForTransactionReceipt({ hash: refundTx })
+        console.log(`[refund] sent ${inputBalance} of ${tokenIn} back to payer`)
+      }
+    }
+
+    // Refund any output token (e.g. USDC if swap happened but deposit failed)
+    if (invoiceToken.toLowerCase() !== tokenIn.toLowerCase()) {
+      const outputBalance = await publicClient.readContract({
+        address: invoiceToken as `0x${string}`,
+        abi: erc20Abi,
+        functionName: "balanceOf",
+        args: [burnerAccount.address],
+      })
+      if (outputBalance > BigInt(0)) {
+        const refundTx = await burnerWalletClient.sendTransaction({
+          to: invoiceToken as `0x${string}`,
+          data: encodeFunctionData({
+            abi: erc20Abi,
+            functionName: "transfer",
+            args: [payerAddr, outputBalance],
+          }),
+        })
+        await publicClient.waitForTransactionReceipt({ hash: refundTx })
+        console.log(`[refund] sent ${outputBalance} of ${invoiceToken} back to payer`)
+      }
+    }
+
+    // Refund remaining ETH
+    const ethBalance = await publicClient.getBalance({ address: burnerAccount.address })
+    // WHY: keep tiny amount for this last tx's gas
+    const gasForRefund = BigInt("100000000000000") // 0.0001 ETH
+    if (ethBalance > gasForRefund) {
+      const refundTx = await burnerWalletClient.sendTransaction({
+        to: payerAddr,
+        value: ethBalance - gasForRefund,
+      })
+      await publicClient.waitForTransactionReceipt({ hash: refundTx })
+      console.log(`[refund] sent ${ethBalance - gasForRefund} wei ETH back to payer`)
+    }
+  } catch (refundError) {
+    console.error("[refund] failed:", refundError)
+  }
+}
 
 export async function POST(request: Request) {
   const body = await request.json()
@@ -42,8 +142,8 @@ export async function POST(request: Request) {
   return NextResponse.json({ error: "Invalid action" }, { status: 400 })
 }
 
-async function handleCreate(body: { invoiceId: string; tokenIn: string; amountIn: string }) {
-  const { invoiceId } = body
+async function handleCreate(body: { invoiceId: string; payerAddress: string }) {
+  const { invoiceId, payerAddress } = body
 
   const invoice = await store.get(invoiceId)
   if (!invoice) {
@@ -53,7 +153,7 @@ async function handleCreate(body: { invoiceId: string; tokenIn: string; amountIn
   const privateKey = generatePrivateKey()
   const account = privateKeyToAccount(privateKey)
 
-  burnerKeys.set(account.address.toLowerCase(), privateKey)
+  burnerStore.set(account.address.toLowerCase(), { privateKey, payerAddress })
 
   return NextResponse.json({ burnerAddress: account.address })
 }
@@ -62,7 +162,6 @@ async function handleExecute(body: {
   invoiceId: string
   burnerAddress: string
   tokenIn: string
-  amountIn: string
   payerAddress: string
 }) {
   const { invoiceId, burnerAddress, tokenIn } = body
@@ -72,15 +171,15 @@ async function handleExecute(body: {
     return NextResponse.json({ error: "Invoice not found" }, { status: 404 })
   }
 
-  const privateKey = burnerKeys.get(burnerAddress.toLowerCase())
-  if (!privateKey) {
+  const burnerInfo = burnerStore.get(burnerAddress.toLowerCase())
+  if (!burnerInfo) {
     return NextResponse.json({ error: "Burner not found" }, { status: 400 })
   }
 
   await store.update(invoiceId, { status: "paying" })
 
   try {
-    const burnerAccount = privateKeyToAccount(privateKey)
+    const burnerAccount = privateKeyToAccount(burnerInfo.privateKey)
     const burnerWalletClient = createWalletClient({
       account: burnerAccount,
       chain: baseSepolia,
@@ -93,11 +192,9 @@ async function handleExecute(body: {
 
     const isEthInput = tokenIn.toLowerCase() === WETH.address.toLowerCase()
 
-    // Step 1: If input is WETH (from ETH send), wrap ETH keeping gas reserve
+    // Step 1: Wrap ETH keeping gas reserve
     if (isEthInput) {
       const ethBalance = await publicClient.getBalance({ address: burnerAccount.address })
-      // WHY: reserve enough for ~5 txs (wrap, approve router, swap, approve permit2, deposit)
-      const GAS_RESERVE = BigInt("5000000000000000") // 0.005 ETH
       const wrapAmount = ethBalance - GAS_RESERVE
       if (wrapAmount <= BigInt(0)) {
         throw new Error("Insufficient ETH sent — not enough to cover gas")
@@ -108,7 +205,7 @@ async function handleExecute(body: {
         value: wrapAmount,
       })
       await publicClient.waitForTransactionReceipt({ hash: wrapTx })
-      console.log(`[swap] wrapped ${wrapAmount} wei ETH to WETH, reserved ${GAS_RESERVE} wei for gas`)
+      console.log(`[swap] wrapped ${wrapAmount} wei ETH to WETH`)
     }
 
     // Step 2: Approve token for Uniswap router
@@ -121,18 +218,16 @@ async function handleExecute(body: {
       }),
     })
     await publicClient.waitForTransactionReceipt({ hash: approveTx })
-    console.log(`[swap] approved token for router`)
 
-    // Step 3: Get max input amount available
+    // Step 3: Get max input available
     const tokenBalance = await publicClient.readContract({
       address: tokenIn as `0x${string}`,
       abi: erc20Abi,
       functionName: "balanceOf",
       args: [burnerAccount.address],
     })
-    console.log(`[swap] token balance available: ${tokenBalance}`)
 
-    // Step 4: Swap exact output — freelancer gets the full invoice amount
+    // Step 4: Swap exact output — freelancer gets full invoice amount
     const swapTx = await burnerWalletClient.sendTransaction({
       to: SWAP_ROUTER as `0x${string}`,
       data: encodeFunctionData({
@@ -154,20 +249,10 @@ async function handleExecute(body: {
     const swapReceipt = await publicClient.waitForTransactionReceipt({ hash: swapTx })
     console.log(`[swap] swap executed: ${swapReceipt.transactionHash}`)
 
-    // Step 5: Check output balance
-    const outputBalance = await publicClient.readContract({
-      address: invoice.tokenAddress as `0x${string}`,
-      abi: erc20Abi,
-      functionName: "balanceOf",
-      args: [burnerAccount.address],
-    })
-    console.log(`[swap] output balance: ${outputBalance}`)
-
-    // Step 6: Deposit output to freelancer's Unlink address via Permit2
+    // Step 5: Deposit exact invoice amount to freelancer's Unlink address
     const unlinkClient = createUnlinkClient(ENGINE_URL, process.env.UNLINK_API_KEY!)
     const env = await getEnvironment(unlinkClient)
 
-    // Approve for Permit2
     const approvePermit2Tx = await burnerWalletClient.sendTransaction({
       to: invoice.tokenAddress as `0x${string}`,
       data: encodeFunctionData({
@@ -184,7 +269,7 @@ async function handleExecute(body: {
       body: {
         unlink_address: invoice.recipientUnlinkAddress,
         token: invoice.tokenAddress,
-        amount: outputBalance.toString(),
+        amount: invoice.amountWei,
         environment: env.name,
         evm_address: burnerAccount.address,
       },
@@ -197,7 +282,6 @@ async function handleExecute(body: {
     const { tx_id, notes_hash } = prepareRes.data!.data
     const deadline = Math.floor(Date.now() / 1000) + 3600
 
-    // Build and sign Permit2 witness typed data with burner key
     const typedData = {
       domain: {
         name: "Permit2" as const,
@@ -222,7 +306,7 @@ async function handleExecute(body: {
       message: {
         permitted: {
           token: invoice.tokenAddress as `0x${string}`,
-          amount: outputBalance.toString(),
+          amount: invoice.amountWei,
         },
         spender: env.pool_address as `0x${string}`,
         nonce: BigInt(nonce),
@@ -246,7 +330,6 @@ async function handleExecute(body: {
       throw new Error(`Deposit submit failed: ${JSON.stringify(submitRes.error)}`)
     }
 
-    // Poll until terminal
     const TERMINAL = new Set(["relayed", "processed", "failed"])
     let status = submitRes.data!.data.status
     while (!TERMINAL.has(status)) {
@@ -261,9 +344,6 @@ async function handleExecute(body: {
       throw new Error("Deposit to privacy pool failed")
     }
 
-    // Clean up burner
-    burnerKeys.delete(burnerAddress.toLowerCase())
-
     await store.update(invoiceId, {
       status: "paid",
       txId: tx_id,
@@ -271,13 +351,20 @@ async function handleExecute(body: {
       paidAt: Date.now(),
     })
 
+    // WHY: refund leftover WETH/ETH to payer after successful payment
+    await refundBurner(burnerInfo, tokenIn, invoice.tokenAddress)
+    burnerStore.delete(burnerAddress.toLowerCase())
+
     return NextResponse.json({
       status: "paid",
       txId: tx_id,
       txHash: swapReceipt.transactionHash,
     })
   } catch (error) {
-    burnerKeys.delete(burnerAddress.toLowerCase())
+    // WHY: refund everything on failure — don't trap payer's funds
+    await refundBurner(burnerInfo, tokenIn, invoice.tokenAddress)
+    burnerStore.delete(burnerAddress.toLowerCase())
+
     await store.update(invoiceId, { status: "pending" })
     console.error("Swap payment error:", error)
     const message = error instanceof Error ? error.message : "Swap payment failed"
