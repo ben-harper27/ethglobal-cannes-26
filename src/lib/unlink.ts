@@ -2,11 +2,9 @@ import { createUnlink, unlinkAccount, unlinkEvm } from "@unlink-xyz/sdk"
 import { createPublicClient, createWalletClient, http } from "viem"
 import { privateKeyToAccount } from "viem/accounts"
 import { baseSepolia } from "viem/chains"
-import type { User } from "./types"
 
 type UnlinkClient = ReturnType<typeof createUnlink>
 
-const clientCache = new Map<string, UnlinkClient>()
 let _payerClient: UnlinkClient | null = null
 
 function getServerEvmProvider() {
@@ -28,23 +26,17 @@ function getServerEvmProvider() {
   return unlinkEvm.fromViem({ walletClient, publicClient })
 }
 
-export function getClientForUser(user: User): UnlinkClient {
-  const cached = clientCache.get(user.unlinkAddress)
-  if (cached) return cached
-
+export function createClientFromSeed(seedHex: string): UnlinkClient {
   const seedBytes = new Uint8Array(
-    Buffer.from(user.seed.startsWith("0x") ? user.seed.slice(2) : user.seed, "hex")
+    Buffer.from(seedHex.startsWith("0x") ? seedHex.slice(2) : seedHex, "hex")
   )
 
-  const client = createUnlink({
+  return createUnlink({
     engineUrl: "https://staging-api.unlink.xyz",
     apiKey: process.env.UNLINK_API_KEY!,
     account: unlinkAccount.fromSeed({ seed: seedBytes }),
     evm: getServerEvmProvider(),
   })
-
-  clientCache.set(user.unlinkAddress, client)
-  return client
 }
 
 export function getPayerClient(): UnlinkClient {

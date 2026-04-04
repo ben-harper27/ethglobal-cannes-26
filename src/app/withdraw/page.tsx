@@ -12,8 +12,8 @@ import { motion, AnimatePresence } from "framer-motion"
 import { useWalletAuth } from "@/hooks/use-wallet-auth"
 
 export default function WithdrawPage() {
-  const { unlinkAddress, isConnected, isDeriving } = useWalletAuth()
-  const { balances, isLoading: balancesLoading, invalidate } = useBalance(unlinkAddress)
+  const { seed, isConnected, isDeriving } = useWalletAuth()
+  const { balances, isLoading: balancesLoading, invalidate } = useBalance(seed)
   const [recipientAddress, setRecipientAddress] = useState("")
   const [amount, setAmount] = useState("")
   const [isSubmitting, setIsSubmitting] = useState(false)
@@ -46,7 +46,7 @@ export default function WithdrawPage() {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
-          unlinkAddress,
+          seed,
           recipientAddress,
           amount: amountWei,
         }),

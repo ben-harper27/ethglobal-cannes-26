@@ -7,16 +7,22 @@ interface BalanceResponse {
   }>
 }
 
-const fetcher = (url: string): Promise<BalanceResponse> =>
-  fetch(url).then((res) => res.json())
+async function fetchBalance(seed: string): Promise<BalanceResponse> {
+  const res = await fetch("/api/balance", {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ seed }),
+  })
+  return res.json()
+}
 
-export function useBalance(unlinkAddress?: string | null) {
+export function useBalance(seed?: string | null) {
   const queryClient = useQueryClient()
 
   const { data, error, isLoading } = useQuery({
-    queryKey: ["balance", unlinkAddress],
-    queryFn: () => fetcher(`/api/balance?unlink=${unlinkAddress}`),
-    enabled: !!unlinkAddress,
+    queryKey: ["balance", seed],
+    queryFn: () => fetchBalance(seed!),
+    enabled: !!seed,
   })
 
   const invalidate = () =>

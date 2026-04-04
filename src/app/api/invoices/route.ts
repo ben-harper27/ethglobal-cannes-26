@@ -29,14 +29,6 @@ export async function POST(request: Request) {
     )
   }
 
-  const user = await store.getUser(unlinkAddress)
-  if (!user) {
-    return NextResponse.json(
-      { error: "Account not registered" },
-      { status: 400 }
-    )
-  }
-
   const tokenAddress = process.env.TEST_TOKEN_ADDRESS!
   const amountWei = parseUnits(amount, 18).toString()
 

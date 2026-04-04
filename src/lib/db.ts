@@ -18,10 +18,6 @@ export async function initDb() {
   if (_initialized) return
   const db = getDb()
   await db.batch([
-    `CREATE TABLE IF NOT EXISTS users (
-      unlink_address TEXT PRIMARY KEY,
-      seed TEXT NOT NULL
-    )`,
     `CREATE TABLE IF NOT EXISTS invoices (
       id TEXT PRIMARY KEY,
       recipient_unlink_address TEXT NOT NULL,

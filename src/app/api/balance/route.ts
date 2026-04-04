@@ -1,25 +1,18 @@
 import { NextResponse } from "next/server"
-import { store } from "@/lib/store"
-import { getClientForUser } from "@/lib/unlink"
+import { createClientFromSeed } from "@/lib/unlink"
 
-export async function GET(request: Request) {
-  const { searchParams } = new URL(request.url)
-  const unlinkAddress = searchParams.get("unlink")
+export async function POST(request: Request) {
+  const { seed } = await request.json()
 
-  if (!unlinkAddress) {
+  if (!seed) {
     return NextResponse.json(
-      { error: "unlink query parameter is required" },
+      { error: "seed is required" },
       { status: 400 }
     )
   }
 
-  const user = await store.getUser(unlinkAddress)
-  if (!user) {
-    return NextResponse.json({ balances: [] })
-  }
-
   try {
-    const client = getClientForUser(user)
+    const client = createClientFromSeed(seed)
     const { balances } = await client.getBalances()
     return NextResponse.json({ balances })
   } catch (error) {

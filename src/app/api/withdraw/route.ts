@@ -1,27 +1,18 @@
 import { NextResponse } from "next/server"
-import { store } from "@/lib/store"
-import { getClientForUser } from "@/lib/unlink"
+import { createClientFromSeed } from "@/lib/unlink"
 
 export async function POST(request: Request) {
-  const { unlinkAddress, recipientAddress, amount } = await request.json()
+  const { seed, recipientAddress, amount } = await request.json()
 
-  if (!unlinkAddress || !recipientAddress || !amount) {
+  if (!seed || !recipientAddress || !amount) {
     return NextResponse.json(
-      { error: "unlinkAddress, recipientAddress, and amount are required" },
-      { status: 400 }
-    )
-  }
-
-  const user = await store.getUser(unlinkAddress)
-  if (!user) {
-    return NextResponse.json(
-      { error: "Account not registered" },
+      { error: "seed, recipientAddress, and amount are required" },
       { status: 400 }
     )
   }
 
   try {
-    const client = getClientForUser(user)
+    const client = createClientFromSeed(seed)
     const tokenAddress = process.env.TEST_TOKEN_ADDRESS!
 
     const result = await client.withdraw({

@@ -12,9 +12,9 @@ import { cn } from "@/lib/utils"
 import { formatUnits } from "viem"
 
 export default function DashboardPage() {
-  const { unlinkAddress, isConnected, isDeriving } = useWalletAuth()
+  const { unlinkAddress, seed, isConnected, isDeriving } = useWalletAuth()
   const { invoices, isLoading: invoicesLoading } = useInvoices(unlinkAddress)
-  const { balances, isLoading: balancesLoading } = useBalance(unlinkAddress)
+  const { balances, isLoading: balancesLoading } = useBalance(seed)
 
   if (!isConnected) {
     return (

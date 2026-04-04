@@ -1,6 +1,6 @@
 import { type InValue } from "@libsql/client"
 import { getDb, initDb } from "./db"
-import type { Invoice, User } from "./types"
+import type { Invoice } from "./types"
 
 async function ensureInit() {
   await initDb()
@@ -18,13 +18,6 @@ function rowToInvoice(row: Record<string, unknown>): Invoice {
     txId: (row.tx_id as string) || undefined,
     createdAt: row.created_at as number,
     paidAt: (row.paid_at as number) || undefined,
-  }
-}
-
-function rowToUser(row: Record<string, unknown>): User {
-  return {
-    unlinkAddress: row.unlink_address as string,
-    seed: row.seed as string,
   }
 }
 
@@ -76,23 +69,5 @@ export const store = {
 
     args.push(id)
     await getDb().execute({ sql: `UPDATE invoices SET ${sets.join(", ")} WHERE id = ?`, args })
-  },
-
-  async getUser(unlinkAddress: string): Promise<User | undefined> {
-    await ensureInit()
-    const result = await getDb().execute({
-      sql: "SELECT * FROM users WHERE unlink_address = ?",
-      args: [unlinkAddress],
-    })
-    if (result.rows.length === 0) return undefined
-    return rowToUser(result.rows[0] as unknown as Record<string, unknown>)
-  },
-
-  async setUser(user: User): Promise<void> {
-    await ensureInit()
-    await getDb().execute({
-      sql: `INSERT OR REPLACE INTO users (unlink_address, seed) VALUES (?, ?)`,
-      args: [user.unlinkAddress, user.seed],
-    })
   },
 }

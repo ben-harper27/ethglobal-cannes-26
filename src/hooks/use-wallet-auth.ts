@@ -2,79 +2,97 @@
 
 import { useState, useEffect, useCallback } from "react"
 import { useDynamicContext } from "@dynamic-labs/sdk-react-core"
-import { SIGN_MESSAGE } from "@/lib/auth"
+import { SIGN_MESSAGE, deriveSeed } from "@/lib/auth"
+import { toHex } from "viem"
+
+function storageKey(walletAddress: string): string {
+  return `cloak_${walletAddress.toLowerCase()}`
+}
+
+interface StoredAccount {
+  seed: string
+  unlinkAddress: string
+}
 
 export function useWalletAuth() {
   const { primaryWallet } = useDynamicContext()
-  const [unlinkAddress, setUnlinkAddress] = useState<string | null>(null)
+  const [account, setAccount] = useState<StoredAccount | null>(null)
   const [isDeriving, setIsDeriving] = useState(false)
-  const [checked, setChecked] = useState(false)
 
+  const walletAddress = primaryWallet?.address ?? null
   const isConnected = !!primaryWallet
+  const unlinkAddress = account?.unlinkAddress ?? null
+  const seed = account?.seed ?? null
 
-  const checkExisting = useCallback(async () => {
-    const stored = localStorage.getItem("cloak_unlink_address")
-    if (stored) {
-      const res = await fetch(`/api/auth/check?unlink=${stored}`)
-      const data = await res.json()
-      if (data.registered) {
-        setUnlinkAddress(stored)
-        setChecked(true)
-        return
+  const loadFromStorage = useCallback(() => {
+    if (!walletAddress) return
+    const raw = localStorage.getItem(storageKey(walletAddress))
+    if (raw) {
+      try {
+        setAccount(JSON.parse(raw))
+      } catch {
+        localStorage.removeItem(storageKey(walletAddress))
       }
     }
-    setChecked(true)
-  }, [])
+  }, [walletAddress])
 
   const deriveAccount = useCallback(async () => {
-    if (!primaryWallet) return
+    if (!primaryWallet || !walletAddress) return
 
     setIsDeriving(true)
     try {
       const signature = await primaryWallet.signMessage(SIGN_MESSAGE)
+      if (!signature) throw new Error("Signature rejected")
+      const seedBytes = deriveSeed(signature as string)
+      const seedHex = toHex(seedBytes)
 
       const res = await fetch("/api/auth/derive", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ signature }),
+        body: JSON.stringify({ seed: seedHex }),
       })
 
       if (!res.ok) {
         const data = await res.json()
-        throw new Error(data.error || "Failed to derive account")
+        throw new Error(data.error || "Failed to register account")
       }
 
       const { unlinkAddress: addr } = await res.json()
-      localStorage.setItem("cloak_unlink_address", addr)
-      setUnlinkAddress(addr)
+      const stored: StoredAccount = { seed: seedHex, unlinkAddress: addr }
+      localStorage.setItem(storageKey(walletAddress), JSON.stringify(stored))
+      setAccount(stored)
     } catch (error) {
       console.error("Account derivation failed:", error)
     } finally {
       setIsDeriving(false)
     }
-  }, [primaryWallet])
+  }, [primaryWallet, walletAddress])
 
+  // WHY: reset when wallet changes
   useEffect(() => {
-    if (isConnected && !checked) {
-      checkExisting()
-    }
-  }, [isConnected, checked, checkExisting])
+    setAccount(null)
+  }, [walletAddress])
 
+  // WHY: try loading from localStorage before prompting signature
   useEffect(() => {
-    if (isConnected && checked && !unlinkAddress && !isDeriving) {
-      deriveAccount()
+    if (isConnected && !account) {
+      loadFromStorage()
     }
-  }, [isConnected, checked, unlinkAddress, isDeriving, deriveAccount])
+  }, [isConnected, account, loadFromStorage])
 
+  // WHY: only derive if nothing in localStorage
   useEffect(() => {
-    if (!isConnected) {
-      setUnlinkAddress(null)
-      setChecked(false)
+    if (isConnected && !account && !isDeriving && walletAddress) {
+      const raw = localStorage.getItem(storageKey(walletAddress))
+      if (!raw) {
+        deriveAccount()
+      }
     }
-  }, [isConnected])
+  }, [isConnected, account, isDeriving, walletAddress, deriveAccount])
 
   return {
     unlinkAddress,
+    seed,
     isConnected,
     isDeriving,
     deriveAccount,

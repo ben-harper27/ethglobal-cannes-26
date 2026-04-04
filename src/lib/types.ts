@@ -1,10 +1,5 @@
 export type InvoiceStatus = "pending" | "paying" | "paid" | "withdrawn"
 
-export interface User {
-  unlinkAddress: string
-  seed: string
-}
-
 export interface Invoice {
   id: string
   recipientUnlinkAddress: string

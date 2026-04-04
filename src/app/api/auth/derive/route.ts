@@ -1,39 +1,24 @@
 import { NextResponse } from "next/server"
-import { deriveSeed } from "@/lib/auth"
-import { store } from "@/lib/store"
-import { getClientForUser } from "@/lib/unlink"
-import { toHex } from "viem"
+import { createClientFromSeed } from "@/lib/unlink"
 
 export async function POST(request: Request) {
-  const { signature } = await request.json()
+  const { seed } = await request.json()
 
-  if (!signature) {
+  if (!seed) {
     return NextResponse.json(
-      { error: "signature is required" },
+      { error: "seed is required" },
       { status: 400 }
     )
   }
 
   try {
-    const seed = deriveSeed(signature)
-    const seedHex = toHex(seed)
-
-    const tempUser = { unlinkAddress: "", seed: seedHex }
-    const client = getClientForUser(tempUser)
-    const unlinkAddress = await client.getAddress()
-
-    const existing = await store.getUser(unlinkAddress)
-    if (existing) {
-      return NextResponse.json({ unlinkAddress })
-    }
-
+    const client = createClientFromSeed(seed)
     await client.ensureRegistered()
-
-    await store.setUser({ unlinkAddress, seed: seedHex })
+    const unlinkAddress = await client.getAddress()
 
     return NextResponse.json({ unlinkAddress })
   } catch (error) {
-    const message = error instanceof Error ? error.message : "Derivation failed"
+    const message = error instanceof Error ? error.message : "Registration failed"
     return NextResponse.json({ error: message }, { status: 500 })
   }
 }
