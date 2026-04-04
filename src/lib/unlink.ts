@@ -29,7 +29,7 @@ function getServerEvmProvider() {
 }
 
 export function getClientForUser(user: User): UnlinkClient {
-  const cached = clientCache.get(user.walletAddress.toLowerCase())
+  const cached = clientCache.get(user.unlinkAddress)
   if (cached) return cached
 
   const seedBytes = new Uint8Array(
@@ -43,7 +43,7 @@ export function getClientForUser(user: User): UnlinkClient {
     evm: getServerEvmProvider(),
   })
 
-  clientCache.set(user.walletAddress.toLowerCase(), client)
+  clientCache.set(user.unlinkAddress, client)
   return client
 }
 

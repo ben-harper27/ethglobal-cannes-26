@@ -3,8 +3,6 @@
 import { use, useState } from "react"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
-import { Badge } from "@/components/ui/badge"
-import { Separator } from "@/components/ui/separator"
 import { StatusBadge } from "@/components/status-badge"
 import { useInvoice } from "@/hooks/use-invoice"
 import {
@@ -103,20 +101,6 @@ export default function InvoicePage({
         </CardHeader>
         <CardContent className="flex flex-col gap-6">
           <div className="flex flex-col gap-3">
-            <div className="flex items-center justify-between">
-              <span className="text-sm text-muted-foreground">Pay to</span>
-              {invoice.freelancerEns ? (
-                <Badge variant="outline" className="gap-1.5">
-                  {invoice.freelancerEns}
-                </Badge>
-              ) : (
-                <span className="font-mono text-xs">
-                  {invoice.freelancerAddress.slice(0, 10)}...
-                  {invoice.freelancerAddress.slice(-8)}
-                </span>
-              )}
-            </div>
-            <Separator />
             <div className="flex items-center justify-between">
               <span className="text-sm text-muted-foreground">Amount</span>
               <span className="text-2xl font-bold">

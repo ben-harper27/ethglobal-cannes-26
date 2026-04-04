@@ -12,9 +12,9 @@ import { cn } from "@/lib/utils"
 import { formatUnits } from "viem"
 
 export default function DashboardPage() {
-  const { walletAddress, isConnected, isDeriving } = useWalletAuth()
-  const { invoices, isLoading: invoicesLoading } = useInvoices(walletAddress)
-  const { balances, isLoading: balancesLoading } = useBalance(walletAddress)
+  const { unlinkAddress, isConnected, isDeriving } = useWalletAuth()
+  const { invoices, isLoading: invoicesLoading } = useInvoices(unlinkAddress)
+  const { balances, isLoading: balancesLoading } = useBalance(unlinkAddress)
 
   if (!isConnected) {
     return (
@@ -99,16 +99,11 @@ export default function DashboardPage() {
             <Link key={invoice.id} href={`/invoice/${invoice.id}`}>
               <Card className="transition-colors hover:bg-muted/50">
                 <CardContent className="flex items-center justify-between py-4">
-                  <div className="flex flex-col gap-1">
-                    <div className="flex items-center gap-2">
-                      <span className="font-medium">
-                        {invoice.amount} {invoice.tokenSymbol}
-                      </span>
-                      <StatusBadge status={invoice.status} />
-                    </div>
-                    <span className="text-sm text-muted-foreground">
-                      {invoice.freelancerEns}
+                  <div className="flex items-center gap-2">
+                    <span className="font-medium">
+                      {invoice.amount} {invoice.tokenSymbol}
                     </span>
+                    <StatusBadge status={invoice.status} />
                   </div>
                   <ExternalLink className="h-4 w-4 text-muted-foreground" />
                 </CardContent>

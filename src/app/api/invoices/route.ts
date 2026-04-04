@@ -1,66 +1,57 @@
 import { NextResponse } from "next/server"
 import { nanoid } from "nanoid"
 import { store } from "@/lib/store"
-import { getClientForUser } from "@/lib/unlink"
-import { reverseEns } from "@/lib/ens"
 import type { Invoice } from "@/lib/types"
 import { parseUnits } from "viem"
 
 export async function GET(request: Request) {
   const { searchParams } = new URL(request.url)
-  const wallet = searchParams.get("wallet")
+  const unlinkAddress = searchParams.get("unlink")
 
-  if (wallet) {
-    return NextResponse.json(store.listByWallet(wallet))
-  }
-
-  return NextResponse.json(store.list())
-}
-
-export async function POST(request: Request) {
-  const body = await request.json()
-  const { walletAddress, amount, tokenSymbol, autoSwap } = body
-
-  if (!walletAddress) {
+  if (!unlinkAddress) {
     return NextResponse.json(
-      { error: "walletAddress is required" },
+      { error: "unlink query parameter is required" },
       { status: 400 }
     )
   }
 
-  const user = store.getUser(walletAddress)
+  return NextResponse.json(await store.listByUnlinkAddress(unlinkAddress))
+}
+
+export async function POST(request: Request) {
+  const body = await request.json()
+  const { unlinkAddress, amount, tokenSymbol } = body
+
+  if (!unlinkAddress || !amount) {
+    return NextResponse.json(
+      { error: "unlinkAddress and amount are required" },
+      { status: 400 }
+    )
+  }
+
+  const user = await store.getUser(unlinkAddress)
   if (!user) {
     return NextResponse.json(
-      { error: "Wallet not registered. Please connect and derive your account first." },
+      { error: "Account not registered" },
       { status: 400 }
     )
   }
 
   const tokenAddress = process.env.TEST_TOKEN_ADDRESS!
-
-  const ensName = await reverseEns(walletAddress as `0x${string}`)
-
-  const client = getClientForUser(user)
-  const recipientUnlinkAddress = await client.getAddress()
-
   const amountWei = parseUnits(amount, 18).toString()
 
   const invoice: Invoice = {
     id: nanoid(12),
-    freelancerWallet: walletAddress.toLowerCase(),
-    freelancerEns: ensName || "",
-    freelancerAddress: walletAddress,
+    recipientUnlinkAddress: unlinkAddress,
     tokenAddress,
     tokenSymbol: tokenSymbol || "TEST",
     amount,
     amountWei,
-    recipientUnlinkAddress,
     status: "pending",
-    autoSwap: autoSwap || undefined,
     createdAt: Date.now(),
   }
 
-  store.create(invoice)
+  await store.create(invoice)
 
   return NextResponse.json(invoice, { status: 201 })
 }

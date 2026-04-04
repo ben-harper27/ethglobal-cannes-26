@@ -11,7 +11,7 @@ import { useWalletAuth } from "@/hooks/use-wallet-auth"
 
 export default function CreateInvoicePage() {
   const router = useRouter()
-  const { walletAddress, isConnected, isDeriving } = useWalletAuth()
+  const { unlinkAddress, isConnected, isDeriving } = useWalletAuth()
   const [amount, setAmount] = useState("")
   const [isSubmitting, setIsSubmitting] = useState(false)
 
@@ -19,7 +19,7 @@ export default function CreateInvoicePage() {
     async (e: React.FormEvent) => {
       e.preventDefault()
 
-      if (!walletAddress) {
+      if (!unlinkAddress) {
         toast.error("Please connect your wallet first")
         return
       }
@@ -36,7 +36,7 @@ export default function CreateInvoicePage() {
           method: "POST",
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify({
-            walletAddress,
+            unlinkAddress,
             amount,
             tokenSymbol: "TEST",
           }),
@@ -58,7 +58,7 @@ export default function CreateInvoicePage() {
         setIsSubmitting(false)
       }
     },
-    [walletAddress, amount, router]
+    [unlinkAddress, amount, router]
   )
 
   if (!isConnected) {
@@ -99,13 +99,6 @@ export default function CreateInvoicePage() {
         </CardHeader>
         <CardContent>
           <form onSubmit={handleSubmit} className="flex flex-col gap-4">
-            <div className="rounded-lg bg-muted p-3">
-              <p className="text-xs text-muted-foreground">Receiving wallet</p>
-              <p className="font-mono text-sm">
-                {walletAddress?.slice(0, 10)}...{walletAddress?.slice(-8)}
-              </p>
-            </div>
-
             <div className="flex flex-col gap-2">
               <label className="text-sm font-medium" htmlFor="amount">
                 Amount

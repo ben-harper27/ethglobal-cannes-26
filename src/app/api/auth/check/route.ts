@@ -3,19 +3,16 @@ import { store } from "@/lib/store"
 
 export async function GET(request: Request) {
   const { searchParams } = new URL(request.url)
-  const wallet = searchParams.get("wallet")
+  const unlinkAddress = searchParams.get("unlink")
 
-  if (!wallet) {
+  if (!unlinkAddress) {
     return NextResponse.json({ registered: false })
   }
 
-  const user = store.getUser(wallet)
+  const user = await store.getUser(unlinkAddress)
   if (!user) {
     return NextResponse.json({ registered: false })
   }
 
-  return NextResponse.json({
-    registered: true,
-    unlinkAddress: user.unlinkAddress,
-  })
+  return NextResponse.json({ registered: true, unlinkAddress: user.unlinkAddress })
 }

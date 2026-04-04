@@ -4,16 +4,16 @@ import { getClientForUser } from "@/lib/unlink"
 
 export async function GET(request: Request) {
   const { searchParams } = new URL(request.url)
-  const wallet = searchParams.get("wallet")
+  const unlinkAddress = searchParams.get("unlink")
 
-  if (!wallet) {
+  if (!unlinkAddress) {
     return NextResponse.json(
-      { error: "wallet query parameter is required" },
+      { error: "unlink query parameter is required" },
       { status: 400 }
     )
   }
 
-  const user = store.getUser(wallet)
+  const user = await store.getUser(unlinkAddress)
   if (!user) {
     return NextResponse.json({ balances: [] })
   }

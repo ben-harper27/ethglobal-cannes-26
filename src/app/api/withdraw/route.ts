@@ -3,19 +3,19 @@ import { store } from "@/lib/store"
 import { getClientForUser } from "@/lib/unlink"
 
 export async function POST(request: Request) {
-  const { walletAddress, recipientAddress, amount } = await request.json()
+  const { unlinkAddress, recipientAddress, amount } = await request.json()
 
-  if (!walletAddress || !recipientAddress || !amount) {
+  if (!unlinkAddress || !recipientAddress || !amount) {
     return NextResponse.json(
-      { error: "walletAddress, recipientAddress, and amount are required" },
+      { error: "unlinkAddress, recipientAddress, and amount are required" },
       { status: 400 }
     )
   }
 
-  const user = store.getUser(walletAddress)
+  const user = await store.getUser(unlinkAddress)
   if (!user) {
     return NextResponse.json(
-      { error: "Wallet not registered" },
+      { error: "Account not registered" },
       { status: 400 }
     )
   }

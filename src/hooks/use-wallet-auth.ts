@@ -10,24 +10,21 @@ export function useWalletAuth() {
   const [isDeriving, setIsDeriving] = useState(false)
   const [checked, setChecked] = useState(false)
 
-  const walletAddress = primaryWallet?.address ?? null
   const isConnected = !!primaryWallet
 
   const checkExisting = useCallback(async () => {
-    if (!walletAddress) return
-
-    try {
-      const res = await fetch(`/api/auth/check?wallet=${walletAddress}`)
+    const stored = localStorage.getItem("cloak_unlink_address")
+    if (stored) {
+      const res = await fetch(`/api/auth/check?unlink=${stored}`)
       const data = await res.json()
       if (data.registered) {
-        setUnlinkAddress(data.unlinkAddress)
+        setUnlinkAddress(stored)
+        setChecked(true)
+        return
       }
-    } catch {
-      // ignore — will fall through to derive
-    } finally {
-      setChecked(true)
     }
-  }, [walletAddress])
+    setChecked(true)
+  }, [])
 
   const deriveAccount = useCallback(async () => {
     if (!primaryWallet) return
@@ -39,10 +36,7 @@ export function useWalletAuth() {
       const res = await fetch("/api/auth/derive", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          signature,
-          walletAddress: primaryWallet.address,
-        }),
+        body: JSON.stringify({ signature }),
       })
 
       if (!res.ok) {
@@ -51,6 +45,7 @@ export function useWalletAuth() {
       }
 
       const { unlinkAddress: addr } = await res.json()
+      localStorage.setItem("cloak_unlink_address", addr)
       setUnlinkAddress(addr)
     } catch (error) {
       console.error("Account derivation failed:", error)
@@ -59,14 +54,12 @@ export function useWalletAuth() {
     }
   }, [primaryWallet])
 
-  // WHY: check server first to avoid re-signing on every page navigation
   useEffect(() => {
     if (isConnected && !checked) {
       checkExisting()
     }
   }, [isConnected, checked, checkExisting])
 
-  // Only derive if check came back unregistered
   useEffect(() => {
     if (isConnected && checked && !unlinkAddress && !isDeriving) {
       deriveAccount()
@@ -81,7 +74,6 @@ export function useWalletAuth() {
   }, [isConnected])
 
   return {
-    walletAddress,
     unlinkAddress,
     isConnected,
     isDeriving,

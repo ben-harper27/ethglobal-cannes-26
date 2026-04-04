@@ -5,7 +5,7 @@ import { getClientForUser, getPayerClient } from "@/lib/unlink"
 export async function POST(request: Request) {
   const { invoiceId } = await request.json()
 
-  const invoice = store.get(invoiceId)
+  const invoice = await store.get(invoiceId)
   if (!invoice) {
     return NextResponse.json({ error: "Invoice not found" }, { status: 404 })
   }
@@ -17,7 +17,7 @@ export async function POST(request: Request) {
     )
   }
 
-  const freelancerUser = store.getUser(invoice.freelancerWallet)
+  const freelancerUser = await store.getUser(invoice.recipientUnlinkAddress)
   if (!freelancerUser) {
     return NextResponse.json(
       { error: "Freelancer account not found" },
@@ -25,7 +25,7 @@ export async function POST(request: Request) {
     )
   }
 
-  store.update(invoiceId, { status: "paying" })
+  await store.update(invoiceId, { status: "paying" })
 
   try {
     const payer = getPayerClient()
@@ -59,7 +59,7 @@ export async function POST(request: Request) {
 
     await payer.pollTransactionStatus(transfer.txId)
 
-    store.update(invoiceId, {
+    await store.update(invoiceId, {
       status: "paid",
       txId: transfer.txId,
       paidAt: Date.now(),
@@ -67,7 +67,7 @@ export async function POST(request: Request) {
 
     return NextResponse.json({ status: "paid", txId: transfer.txId })
   } catch (error) {
-    store.update(invoiceId, { status: "pending" })
+    await store.update(invoiceId, { status: "pending" })
     const message = error instanceof Error ? error.message : "Payment failed"
     return NextResponse.json({ error: message }, { status: 500 })
   }

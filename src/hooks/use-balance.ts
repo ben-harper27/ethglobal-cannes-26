@@ -10,13 +10,13 @@ interface BalanceResponse {
 const fetcher = (url: string): Promise<BalanceResponse> =>
   fetch(url).then((res) => res.json())
 
-export function useBalance(walletAddress?: string | null) {
+export function useBalance(unlinkAddress?: string | null) {
   const queryClient = useQueryClient()
 
   const { data, error, isLoading } = useQuery({
-    queryKey: ["balance", walletAddress],
-    queryFn: () => fetcher(`/api/balance?wallet=${walletAddress}`),
-    enabled: !!walletAddress,
+    queryKey: ["balance", unlinkAddress],
+    queryFn: () => fetcher(`/api/balance?unlink=${unlinkAddress}`),
+    enabled: !!unlinkAddress,
   })
 
   const invalidate = () =>
