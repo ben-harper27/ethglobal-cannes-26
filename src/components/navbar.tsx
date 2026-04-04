@@ -1,5 +1,13 @@
+"use client"
+
 import Link from "next/link"
 import { EyeOff } from "lucide-react"
+import dynamic from "next/dynamic"
+
+const WalletButton = dynamic(
+  () => import("@/components/wallet-button").then((mod) => mod.WalletButton),
+  { ssr: false }
+)
 
 export function Navbar() {
   return (
@@ -28,6 +36,7 @@ export function Navbar() {
           >
             Withdraw
           </Link>
+          <WalletButton />
         </nav>
       </div>
     </header>

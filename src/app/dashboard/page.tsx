@@ -6,13 +6,45 @@ import { buttonVariants } from "@/components/ui/button"
 import { StatusBadge } from "@/components/status-badge"
 import { useInvoices } from "@/hooks/use-invoices"
 import { useBalance } from "@/hooks/use-balance"
-import { Loader2, Plus, ExternalLink } from "lucide-react"
+import { useWalletAuth } from "@/hooks/use-wallet-auth"
+import { Loader2, Plus, ExternalLink, Wallet } from "lucide-react"
 import { cn } from "@/lib/utils"
 import { formatUnits } from "viem"
 
 export default function DashboardPage() {
-  const { invoices, isLoading: invoicesLoading } = useInvoices()
-  const { balances, isLoading: balancesLoading } = useBalance()
+  const { unlinkAddress, seed, isConnected, isDeriving } = useWalletAuth()
+  const { invoices, isLoading: invoicesLoading } = useInvoices(unlinkAddress)
+  const { balances, isLoading: balancesLoading } = useBalance(seed)
+
+  if (!isConnected) {
+    return (
+      <div className="mx-auto max-w-3xl px-4 py-16">
+        <Card>
+          <CardContent className="flex flex-col items-center gap-4 py-12">
+            <Wallet className="h-10 w-10 text-muted-foreground" />
+            <p className="text-muted-foreground">
+              Connect your wallet to view your dashboard
+            </p>
+          </CardContent>
+        </Card>
+      </div>
+    )
+  }
+
+  if (isDeriving) {
+    return (
+      <div className="mx-auto max-w-3xl px-4 py-16">
+        <Card>
+          <CardContent className="flex flex-col items-center gap-4 py-12">
+            <Loader2 className="h-10 w-10 animate-spin text-muted-foreground" />
+            <p className="text-muted-foreground">
+              Setting up your privacy account...
+            </p>
+          </CardContent>
+        </Card>
+      </div>
+    )
+  }
 
   return (
     <div className="mx-auto max-w-3xl px-4 py-16">
@@ -67,16 +99,11 @@ export default function DashboardPage() {
             <Link key={invoice.id} href={`/invoice/${invoice.id}`}>
               <Card className="transition-colors hover:bg-muted/50">
                 <CardContent className="flex items-center justify-between py-4">
-                  <div className="flex flex-col gap-1">
-                    <div className="flex items-center gap-2">
-                      <span className="font-medium">
-                        {invoice.amount} {invoice.tokenSymbol}
-                      </span>
-                      <StatusBadge status={invoice.status} />
-                    </div>
-                    <span className="text-sm text-muted-foreground">
-                      {invoice.freelancerEns}
+                  <div className="flex items-center gap-2">
+                    <span className="font-medium">
+                      {invoice.amount} {invoice.tokenSymbol}
                     </span>
+                    <StatusBadge status={invoice.status} />
                   </div>
                   <ExternalLink className="h-4 w-4 text-muted-foreground" />
                 </CardContent>

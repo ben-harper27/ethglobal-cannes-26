@@ -13,10 +13,12 @@ export async function POST(request: Request) {
 
   try {
     const client = createClientFromSeed(seed)
-    const { balances } = await client.getBalances()
-    return NextResponse.json({ balances })
+    await client.ensureRegistered()
+    const unlinkAddress = await client.getAddress()
+
+    return NextResponse.json({ unlinkAddress })
   } catch (error) {
-    const message = error instanceof Error ? error.message : "Failed to get balances"
+    const message = error instanceof Error ? error.message : "Registration failed"
     return NextResponse.json({ error: message }, { status: 500 })
   }
 }

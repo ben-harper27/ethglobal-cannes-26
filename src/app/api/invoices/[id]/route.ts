@@ -6,7 +6,7 @@ export async function GET(
   { params }: { params: Promise<{ id: string }> }
 ) {
   const { id } = await params
-  const invoice = store.get(id)
+  const invoice = await store.get(id)
 
   if (!invoice) {
     return NextResponse.json({ error: "Invoice not found" }, { status: 404 })

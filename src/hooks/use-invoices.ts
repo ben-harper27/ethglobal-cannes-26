@@ -4,12 +4,13 @@ import type { Invoice } from "@/lib/types"
 const fetcher = (url: string): Promise<Invoice[]> =>
   fetch(url).then((res) => res.json())
 
-export function useInvoices() {
+export function useInvoices(unlinkAddress?: string | null) {
   const queryClient = useQueryClient()
 
   const { data, error, isLoading } = useQuery({
-    queryKey: ["invoices"],
-    queryFn: () => fetcher("/api/invoices"),
+    queryKey: ["invoices", unlinkAddress],
+    queryFn: () => fetcher(`/api/invoices?unlink=${unlinkAddress}`),
+    enabled: !!unlinkAddress,
   })
 
   const invalidate = () =>

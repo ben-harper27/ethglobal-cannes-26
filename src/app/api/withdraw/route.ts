@@ -1,27 +1,27 @@
 import { NextResponse } from "next/server"
-import { getFreelancerClient } from "@/lib/unlink"
+import { createClientFromSeed } from "@/lib/unlink"
 
 export async function POST(request: Request) {
-  const { recipientAddress, amount } = await request.json()
+  const { seed, recipientAddress, amount } = await request.json()
 
-  if (!recipientAddress || !amount) {
+  if (!seed || !recipientAddress || !amount) {
     return NextResponse.json(
-      { error: "recipientAddress and amount are required" },
+      { error: "seed, recipientAddress, and amount are required" },
       { status: 400 }
     )
   }
 
   try {
-    const unlink = getFreelancerClient()
+    const client = createClientFromSeed(seed)
     const tokenAddress = process.env.TEST_TOKEN_ADDRESS!
 
-    const result = await unlink.withdraw({
+    const result = await client.withdraw({
       recipientEvmAddress: recipientAddress,
       token: tokenAddress,
       amount,
     })
 
-    await unlink.pollTransactionStatus(result.txId)
+    await client.pollTransactionStatus(result.txId)
 
     return NextResponse.json({ status: "withdrawn", txId: result.txId })
   } catch (error) {
