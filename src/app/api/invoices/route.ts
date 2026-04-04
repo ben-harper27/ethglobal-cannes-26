@@ -2,7 +2,7 @@ import { NextResponse } from "next/server"
 import { nanoid } from "nanoid"
 import { store } from "@/lib/store"
 import { getClientForUser } from "@/lib/unlink"
-import { resolveEns } from "@/lib/ens"
+import { reverseEns } from "@/lib/ens"
 import type { Invoice } from "@/lib/types"
 import { parseUnits } from "viem"
 
@@ -19,7 +19,7 @@ export async function GET(request: Request) {
 
 export async function POST(request: Request) {
   const body = await request.json()
-  const { walletAddress, freelancerEns, amount, tokenSymbol, autoSwap } = body
+  const { walletAddress, amount, tokenSymbol, autoSwap } = body
 
   if (!walletAddress) {
     return NextResponse.json(
@@ -38,13 +38,7 @@ export async function POST(request: Request) {
 
   const tokenAddress = process.env.TEST_TOKEN_ADDRESS!
 
-  const freelancerAddress = await resolveEns(freelancerEns)
-  if (!freelancerAddress) {
-    return NextResponse.json(
-      { error: `Could not resolve ENS name: ${freelancerEns}` },
-      { status: 400 }
-    )
-  }
+  const ensName = await reverseEns(walletAddress as `0x${string}`)
 
   const client = getClientForUser(user)
   const recipientUnlinkAddress = await client.getAddress()
@@ -54,8 +48,8 @@ export async function POST(request: Request) {
   const invoice: Invoice = {
     id: nanoid(12),
     freelancerWallet: walletAddress.toLowerCase(),
-    freelancerEns,
-    freelancerAddress,
+    freelancerEns: ensName || "",
+    freelancerAddress: walletAddress,
     tokenAddress,
     tokenSymbol: tokenSymbol || "TEST",
     amount,

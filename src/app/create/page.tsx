@@ -5,35 +5,15 @@ import { useRouter } from "next/navigation"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
-import { EnsBadge } from "@/components/ens-badge"
 import { Loader2, Wallet } from "lucide-react"
 import { toast } from "sonner"
-import { useDeferredValue } from "react"
-import { useQuery } from "@tanstack/react-query"
 import { useWalletAuth } from "@/hooks/use-wallet-auth"
-
-const fetchEns = async (name: string) => {
-  const res = await fetch(`/api/resolve-ens?name=${name}`)
-  if (!res.ok) throw new Error("Could not resolve ENS name")
-  return res.json()
-}
 
 export default function CreateInvoicePage() {
   const router = useRouter()
   const { walletAddress, isConnected, isDeriving } = useWalletAuth()
-  const [ensName, setEnsName] = useState("")
   const [amount, setAmount] = useState("")
   const [isSubmitting, setIsSubmitting] = useState(false)
-
-  const deferredEns = useDeferredValue(ensName)
-  const ensQuery = deferredEns.endsWith(".eth") ? deferredEns : null
-
-  const { data: ensData, isLoading: ensLoading, isError: ensError } = useQuery({
-    queryKey: ["resolve-ens", ensQuery],
-    queryFn: () => fetchEns(ensQuery!),
-    enabled: !!ensQuery,
-    retry: false,
-  })
 
   const handleSubmit = useCallback(
     async (e: React.FormEvent) => {
@@ -41,11 +21,6 @@ export default function CreateInvoicePage() {
 
       if (!walletAddress) {
         toast.error("Please connect your wallet first")
-        return
-      }
-
-      if (!ensData?.address) {
-        toast.error("Please enter a valid ENS name")
         return
       }
 
@@ -62,7 +37,6 @@ export default function CreateInvoicePage() {
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify({
             walletAddress,
-            freelancerEns: ensName,
             amount,
             tokenSymbol: "TEST",
           }),
@@ -84,7 +58,7 @@ export default function CreateInvoicePage() {
         setIsSubmitting(false)
       }
     },
-    [walletAddress, ensData, ensName, amount, router]
+    [walletAddress, amount, router]
   )
 
   if (!isConnected) {
@@ -125,23 +99,11 @@ export default function CreateInvoicePage() {
         </CardHeader>
         <CardContent>
           <form onSubmit={handleSubmit} className="flex flex-col gap-4">
-            <div className="flex flex-col gap-2">
-              <label className="text-sm font-medium" htmlFor="ens">
-                Your ENS Name
-              </label>
-              <div className="flex items-center gap-2">
-                <Input
-                  id="ens"
-                  placeholder="yourname.eth"
-                  value={ensName}
-                  onChange={(e) => setEnsName(e.target.value)}
-                />
-                <EnsBadge
-                  address={ensData?.address ?? null}
-                  isLoading={ensLoading}
-                  isError={ensError}
-                />
-              </div>
+            <div className="rounded-lg bg-muted p-3">
+              <p className="text-xs text-muted-foreground">Receiving wallet</p>
+              <p className="font-mono text-sm">
+                {walletAddress?.slice(0, 10)}...{walletAddress?.slice(-8)}
+              </p>
             </div>
 
             <div className="flex flex-col gap-2">
@@ -162,7 +124,7 @@ export default function CreateInvoicePage() {
               </p>
             </div>
 
-            <Button type="submit" disabled={isSubmitting || !ensData?.address}>
+            <Button type="submit" disabled={isSubmitting || !amount}>
               {isSubmitting && (
                 <Loader2 className="mr-2 h-4 w-4 animate-spin" />
               )}

@@ -105,16 +105,16 @@ export default function InvoicePage({
           <div className="flex flex-col gap-3">
             <div className="flex items-center justify-between">
               <span className="text-sm text-muted-foreground">Pay to</span>
-              <Badge variant="outline" className="gap-1.5">
-                {invoice.freelancerEns}
-              </Badge>
-            </div>
-            <div className="flex items-center justify-between">
-              <span className="text-sm text-muted-foreground">Address</span>
-              <span className="font-mono text-xs text-muted-foreground">
-                {invoice.freelancerAddress.slice(0, 10)}...
-                {invoice.freelancerAddress.slice(-8)}
-              </span>
+              {invoice.freelancerEns ? (
+                <Badge variant="outline" className="gap-1.5">
+                  {invoice.freelancerEns}
+                </Badge>
+              ) : (
+                <span className="font-mono text-xs">
+                  {invoice.freelancerAddress.slice(0, 10)}...
+                  {invoice.freelancerAddress.slice(-8)}
+                </span>
+              )}
             </div>
             <Separator />
             <div className="flex items-center justify-between">
