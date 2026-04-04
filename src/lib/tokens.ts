@@ -16,6 +16,12 @@ export const WETH: Token = {
   decimals: 18,
 }
 
+export const ETH: Token = {
+  address: "0xEeeeeEeeeEeEeeEeEeEeeEEEeeeeEeeeeeeeEEeE",
+  symbol: "ETH",
+  decimals: 18,
+}
+
 export const INVOICE_TOKEN = USDC
 
 export const SWAP_ROUTER = "0x94cC0AaC535CCDB3C01d6787D6413C739ae12bc4"
