@@ -6,13 +6,45 @@ import { buttonVariants } from "@/components/ui/button"
 import { StatusBadge } from "@/components/status-badge"
 import { useInvoices } from "@/hooks/use-invoices"
 import { useBalance } from "@/hooks/use-balance"
-import { Loader2, Plus, ExternalLink } from "lucide-react"
+import { useWalletAuth } from "@/hooks/use-wallet-auth"
+import { Loader2, Plus, ExternalLink, Wallet } from "lucide-react"
 import { cn } from "@/lib/utils"
 import { formatUnits } from "viem"
 
 export default function DashboardPage() {
-  const { invoices, isLoading: invoicesLoading } = useInvoices()
-  const { balances, isLoading: balancesLoading } = useBalance()
+  const { walletAddress, isConnected, isDeriving } = useWalletAuth()
+  const { invoices, isLoading: invoicesLoading } = useInvoices(walletAddress)
+  const { balances, isLoading: balancesLoading } = useBalance(walletAddress)
+
+  if (!isConnected) {
+    return (
+      <div className="mx-auto max-w-3xl px-4 py-16">
+        <Card>
+          <CardContent className="flex flex-col items-center gap-4 py-12">
+            <Wallet className="h-10 w-10 text-muted-foreground" />
+            <p className="text-muted-foreground">
+              Connect your wallet to view your dashboard
+            </p>
+          </CardContent>
+        </Card>
+      </div>
+    )
+  }
+
+  if (isDeriving) {
+    return (
+      <div className="mx-auto max-w-3xl px-4 py-16">
+        <Card>
+          <CardContent className="flex flex-col items-center gap-4 py-12">
+            <Loader2 className="h-10 w-10 animate-spin text-muted-foreground" />
+            <p className="text-muted-foreground">
+              Setting up your privacy account...
+            </p>
+          </CardContent>
+        </Card>
+      </div>
+    )
+  }
 
   return (
     <div className="mx-auto max-w-3xl px-4 py-16">

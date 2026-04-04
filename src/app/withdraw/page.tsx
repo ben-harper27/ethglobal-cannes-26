@@ -5,13 +5,15 @@ import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { useBalance } from "@/hooks/use-balance"
-import { Loader2, ArrowUpFromLine, CheckCircle } from "lucide-react"
+import { Loader2, ArrowUpFromLine, CheckCircle, Wallet } from "lucide-react"
 import { toast } from "sonner"
 import { formatUnits, parseUnits } from "viem"
 import { motion, AnimatePresence } from "framer-motion"
+import { useWalletAuth } from "@/hooks/use-wallet-auth"
 
 export default function WithdrawPage() {
-  const { balances, isLoading: balancesLoading, invalidate } = useBalance()
+  const { walletAddress, isConnected, isDeriving } = useWalletAuth()
+  const { balances, isLoading: balancesLoading, invalidate } = useBalance(walletAddress)
   const [recipientAddress, setRecipientAddress] = useState("")
   const [amount, setAmount] = useState("")
   const [isSubmitting, setIsSubmitting] = useState(false)
@@ -44,6 +46,7 @@ export default function WithdrawPage() {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
+          walletAddress,
           recipientAddress,
           amount: amountWei,
         }),
@@ -66,6 +69,36 @@ export default function WithdrawPage() {
     } finally {
       setIsSubmitting(false)
     }
+  }
+
+  if (!isConnected) {
+    return (
+      <div className="mx-auto max-w-lg px-4 py-16">
+        <Card>
+          <CardContent className="flex flex-col items-center gap-4 py-12">
+            <Wallet className="h-10 w-10 text-muted-foreground" />
+            <p className="text-muted-foreground">
+              Connect your wallet to withdraw funds
+            </p>
+          </CardContent>
+        </Card>
+      </div>
+    )
+  }
+
+  if (isDeriving) {
+    return (
+      <div className="mx-auto max-w-lg px-4 py-16">
+        <Card>
+          <CardContent className="flex flex-col items-center gap-4 py-12">
+            <Loader2 className="h-10 w-10 animate-spin text-muted-foreground" />
+            <p className="text-muted-foreground">
+              Setting up your privacy account...
+            </p>
+          </CardContent>
+        </Card>
+      </div>
+    )
   }
 
   return (

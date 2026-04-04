@@ -1,10 +1,26 @@
 import { NextResponse } from "next/server"
-import { getFreelancerClient } from "@/lib/unlink"
+import { store } from "@/lib/store"
+import { getClientForUser } from "@/lib/unlink"
 
-export async function GET() {
+export async function GET(request: Request) {
+  const { searchParams } = new URL(request.url)
+  const wallet = searchParams.get("wallet")
+
+  if (!wallet) {
+    return NextResponse.json(
+      { error: "wallet query parameter is required" },
+      { status: 400 }
+    )
+  }
+
+  const user = store.getUser(wallet)
+  if (!user) {
+    return NextResponse.json({ balances: [] })
+  }
+
   try {
-    const unlink = getFreelancerClient()
-    const { balances } = await unlink.getBalances()
+    const client = getClientForUser(user)
+    const { balances } = await client.getBalances()
     return NextResponse.json({ balances })
   } catch (error) {
     const message = error instanceof Error ? error.message : "Failed to get balances"

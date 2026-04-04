@@ -6,10 +6,11 @@ import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { EnsBadge } from "@/components/ens-badge"
-import { Loader2 } from "lucide-react"
+import { Loader2, Wallet } from "lucide-react"
 import { toast } from "sonner"
 import { useDeferredValue } from "react"
 import { useQuery } from "@tanstack/react-query"
+import { useWalletAuth } from "@/hooks/use-wallet-auth"
 
 const fetchEns = async (name: string) => {
   const res = await fetch(`/api/resolve-ens?name=${name}`)
@@ -19,6 +20,7 @@ const fetchEns = async (name: string) => {
 
 export default function CreateInvoicePage() {
   const router = useRouter()
+  const { walletAddress, isConnected, isDeriving } = useWalletAuth()
   const [ensName, setEnsName] = useState("")
   const [amount, setAmount] = useState("")
   const [isSubmitting, setIsSubmitting] = useState(false)
@@ -37,6 +39,11 @@ export default function CreateInvoicePage() {
     async (e: React.FormEvent) => {
       e.preventDefault()
 
+      if (!walletAddress) {
+        toast.error("Please connect your wallet first")
+        return
+      }
+
       if (!ensData?.address) {
         toast.error("Please enter a valid ENS name")
         return
@@ -54,6 +61,7 @@ export default function CreateInvoicePage() {
           method: "POST",
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify({
+            walletAddress,
             freelancerEns: ensName,
             amount,
             tokenSymbol: "TEST",
@@ -76,8 +84,38 @@ export default function CreateInvoicePage() {
         setIsSubmitting(false)
       }
     },
-    [ensData, ensName, amount, router]
+    [walletAddress, ensData, ensName, amount, router]
   )
+
+  if (!isConnected) {
+    return (
+      <div className="mx-auto max-w-lg px-4 py-16">
+        <Card>
+          <CardContent className="flex flex-col items-center gap-4 py-12">
+            <Wallet className="h-10 w-10 text-muted-foreground" />
+            <p className="text-muted-foreground">
+              Connect your wallet to create invoices
+            </p>
+          </CardContent>
+        </Card>
+      </div>
+    )
+  }
+
+  if (isDeriving) {
+    return (
+      <div className="mx-auto max-w-lg px-4 py-16">
+        <Card>
+          <CardContent className="flex flex-col items-center gap-4 py-12">
+            <Loader2 className="h-10 w-10 animate-spin text-muted-foreground" />
+            <p className="text-muted-foreground">
+              Setting up your privacy account...
+            </p>
+          </CardContent>
+        </Card>
+      </div>
+    )
+  }
 
   return (
     <div className="mx-auto max-w-lg px-4 py-16">

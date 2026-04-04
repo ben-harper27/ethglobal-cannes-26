@@ -1,6 +1,6 @@
 import { NextResponse } from "next/server"
 import { store } from "@/lib/store"
-import { getFreelancerClient, getPayerClient } from "@/lib/unlink"
+import { getClientForUser, getPayerClient } from "@/lib/unlink"
 
 export async function POST(request: Request) {
   const { invoiceId } = await request.json()
@@ -17,14 +17,22 @@ export async function POST(request: Request) {
     )
   }
 
+  const freelancerUser = store.getUser(invoice.freelancerWallet)
+  if (!freelancerUser) {
+    return NextResponse.json(
+      { error: "Freelancer account not found" },
+      { status: 400 }
+    )
+  }
+
   store.update(invoiceId, { status: "paying" })
 
   try {
     const payer = getPayerClient()
-    const freelancer = getFreelancerClient()
+    const freelancerClient = getClientForUser(freelancerUser)
 
     await payer.ensureRegistered()
-    await freelancer.ensureRegistered()
+    await freelancerClient.ensureRegistered()
 
     const approval = await payer.ensureErc20Approval({
       token: invoice.tokenAddress,
