@@ -1,7 +1,7 @@
 "use client"
 
 import { use, useState, useEffect } from "react"
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
+import { Card, CardContent } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
 import { StatusBadge } from "@/components/status-badge"
 import { useInvoice } from "@/hooks/use-invoice"
@@ -282,196 +282,234 @@ export default function InvoicePage({
 
   if (!invoice) {
     return (
-      <div className="flex flex-1 items-center justify-center">
-        <p className="text-muted-foreground">Invoice not found</p>
+      <div className="flex flex-1 flex-col items-center justify-center gap-3">
+        <EyeOff className="h-10 w-10 text-muted-foreground" />
+        <p className="text-lg font-medium text-muted-foreground">
+          Invoice not found
+        </p>
       </div>
     )
   }
 
   const isPaid = invoice.status === "paid" || invoice.status === "withdrawn"
   const isPaying = paymentStep !== "idle" && paymentStep !== "done"
+  const selectedTokenInfo = PAYMENT_TOKENS.find(
+    (t) => t.address === selectedToken
+  )
 
   return (
     <div className="mx-auto max-w-lg px-4 py-16">
-      <Card>
-        <CardHeader className="flex flex-row items-center justify-between">
-          <CardTitle className="flex items-center gap-2">
-            <EyeOff className="h-5 w-5" />
-            Invoice
-          </CardTitle>
-          <StatusBadge status={invoice.status} />
-        </CardHeader>
-        <CardContent className="flex flex-col gap-6">
-          <div className="flex flex-col gap-3">
-            <div className="flex items-center justify-between">
-              <span className="text-sm text-muted-foreground">Amount</span>
-              <span className="text-2xl font-bold">
-                {invoice.amount} {invoice.tokenSymbol}
-              </span>
-            </div>
-            {isPaid && invoice.txHash && (
-              <a
-                href={`https://sepolia.basescan.org/tx/${invoice.txHash}`}
-                target="_blank"
-                rel="noopener noreferrer"
-                className="text-xs text-primary underline"
-              >
-                View transaction on BaseScan
-              </a>
-            )}
-          </div>
-
-          {!isPaid && !isPaying && paymentStep === "idle" && isConnected && (
-            <div className="flex flex-col gap-2">
-              <label className="text-sm font-medium">Pay with</label>
-              <div className="flex gap-2">
-                {PAYMENT_TOKENS.map((token) => (
-                  <Button
-                    key={token.address}
-                    variant={
-                      selectedToken === token.address ? "default" : "outline"
-                    }
-                    size="sm"
-                    onClick={() => setSelectedToken(token.address)}
-                  >
-                    {token.symbol}
-                    {token.address.toLowerCase() !==
-                      invoice.tokenAddress.toLowerCase() &&
-                      token.address !== ETH.address && (
-                        <ArrowRightLeft className="ml-1 h-3 w-3" />
-                      )}
-                    {token.address === ETH.address && (
-                      <ArrowRightLeft className="ml-1 h-3 w-3" />
-                    )}
-                  </Button>
-                ))}
+      <motion.div
+        initial={{ opacity: 0, y: 10 }}
+        animate={{ opacity: 1, y: 0 }}
+      >
+        <Card>
+          <CardContent className="flex flex-col gap-8 py-10">
+            <div className="flex flex-col items-center gap-2 text-center">
+              <div className="flex items-center gap-2">
+                <EyeOff className="h-4 w-4 text-muted-foreground" />
+                <span className="text-sm text-muted-foreground">
+                  Private Invoice
+                </span>
+                <StatusBadge status={invoice.status} />
               </div>
-              {isCrossToken && (
-                <div className="flex flex-col gap-1">
-                  {quoteLoading ? (
-                    <p className="flex items-center gap-1 text-xs text-muted-foreground">
-                      <Loader2 className="h-3 w-3 animate-spin" />
-                      Getting quote...
-                    </p>
-                  ) : quote ? (
-                    <div className="text-xs text-muted-foreground">
-                      <p>
-                        ≈ {Number(formatUnits(BigInt(quote.amountInWithSlippage), swapTokenDecimals)).toFixed(6)} {isEth ? "ETH" : PAYMENT_TOKENS.find(t => t.address === selectedToken)?.symbol}
-                      </p>
-                      <p className="text-muted-foreground/70">
-                        Includes slippage{quote.gasBuffer !== "0" ? " + gas" : ""} — excess refunded
-                      </p>
-                    </div>
-                  ) : null}
-                  <p className="text-xs text-muted-foreground">
-                    Auto-swaps via Uniswap inside the privacy pool
-                  </p>
-                </div>
+              <p className="text-5xl font-bold">
+                {invoice.amount}{" "}
+                <span className="text-2xl text-muted-foreground">
+                  {invoice.tokenSymbol}
+                </span>
+              </p>
+              {isPaid && invoice.txHash && (
+                <a
+                  href={`https://sepolia.basescan.org/tx/${invoice.txHash}`}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="mt-3 inline-flex items-center gap-2 rounded-lg border border-border px-4 py-2 text-sm transition-colors hover:bg-muted"
+                >
+                  View transaction on BaseScan
+                  <ArrowDownToLine className="h-3.5 w-3.5 -rotate-90" />
+                </a>
               )}
             </div>
-          )}
 
-          <AnimatePresence mode="wait">
-            {isPaying && (
-              <motion.div
-                initial={{ opacity: 0, height: 0 }}
-                animate={{ opacity: 1, height: "auto" }}
-                exit={{ opacity: 0, height: 0 }}
-                className="flex flex-col gap-3 rounded-lg bg-muted p-4"
-              >
-                {steps.map((step) => {
-                  const stepIndex = steps.findIndex(
-                    (s) => s.key === paymentStep
-                  )
-                  const thisIndex = steps.findIndex((s) => s.key === step.key)
-                  const isActive = step.key === paymentStep
-                  const isDone = thisIndex < stepIndex
-
-                  return (
-                    <div
-                      key={step.key}
-                      className="flex items-center gap-2 text-sm"
-                    >
-                      {isDone ? (
-                        <CheckCircle className="h-4 w-4 text-green-500" />
-                      ) : isActive ? (
-                        <Loader2 className="h-4 w-4 animate-spin" />
-                      ) : (
-                        <div className="h-4 w-4 rounded-full border border-border" />
-                      )}
-                      <span
-                        className={
-                          isActive
-                            ? "font-medium"
-                            : isDone
-                              ? "text-muted-foreground"
-                              : "text-muted-foreground/50"
-                        }
+            {!isPaid && !isPaying && paymentStep === "idle" && isConnected && (
+              <div className="flex flex-col gap-3">
+                <label className="text-center text-sm font-medium text-muted-foreground">
+                  Pay with
+                </label>
+                <div className="flex justify-center gap-2">
+                  {PAYMENT_TOKENS.map((token) => {
+                    const isSelected = selectedToken === token.address
+                    const isSwap =
+                      token.address.toLowerCase() !==
+                        (invoice.tokenAddress?.toLowerCase() ?? "") ||
+                      token.address === ETH.address
+                    return (
+                      <Button
+                        key={token.address}
+                        variant={isSelected ? "default" : "outline"}
+                        onClick={() => setSelectedToken(token.address)}
+                        className="min-w-[80px] gap-1.5"
                       >
-                        {step.label}
-                      </span>
-                    </div>
-                  )
-                })}
-              </motion.div>
-            )}
-
-            {paymentStep === "done" && (
-              <motion.div
-                initial={{ opacity: 0, scale: 0.95 }}
-                animate={{ opacity: 1, scale: 1 }}
-                className="flex flex-col items-center gap-2 rounded-lg bg-green-50 p-6 dark:bg-green-950/20"
-              >
-                <ShieldCheck className="h-10 w-10 text-green-500" />
-                <p className="font-semibold text-green-700 dark:text-green-400">
-                  Paid privately
-                </p>
-                <p className="text-center text-xs text-muted-foreground">
-                  No on-chain link between payer and payee
-                </p>
-                {(txHash || invoice.txHash) && (
-                  <a
-                    href={`https://sepolia.basescan.org/tx/${txHash || invoice.txHash}`}
-                    target="_blank"
-                    rel="noopener noreferrer"
-                    className="text-xs text-primary underline"
-                  >
-                    View on BaseScan
-                  </a>
+                        {token.symbol}
+                        {isSwap && (
+                          <ArrowRightLeft className="h-3 w-3 opacity-50" />
+                        )}
+                      </Button>
+                    )
+                  })}
+                </div>
+                {isCrossToken && (
+                  <div className="rounded-xl bg-muted p-4 text-center">
+                    {quoteLoading ? (
+                      <p className="flex items-center justify-center gap-2 text-sm text-muted-foreground">
+                        <Loader2 className="h-3.5 w-3.5 animate-spin" />
+                        Getting quote...
+                      </p>
+                    ) : quote ? (
+                      <div>
+                        <p className="text-lg font-semibold">
+                          ≈{" "}
+                          {Number(
+                            formatUnits(
+                              BigInt(quote.amountInWithSlippage),
+                              swapTokenDecimals
+                            )
+                          ).toFixed(6)}{" "}
+                          {isEth
+                            ? "ETH"
+                            : selectedTokenInfo?.symbol}
+                        </p>
+                        <p className="mt-1 text-xs text-muted-foreground">
+                          Includes slippage
+                          {quote.gasBuffer !== "0" ? " + gas" : ""} — excess
+                          refunded
+                        </p>
+                      </div>
+                    ) : null}
+                  </div>
                 )}
-              </motion.div>
+              </div>
             )}
-          </AnimatePresence>
 
-          <div className="flex gap-2">
-            {!isPaid && paymentStep === "idle" && (
-              <>
-                {!isConnected ? (
-                  <div className="flex flex-1 flex-col items-center gap-2 rounded-lg bg-muted p-4">
-                    <Wallet className="h-6 w-6 text-muted-foreground" />
-                    <p className="text-sm text-muted-foreground">
-                      Connect your wallet to pay
+            <AnimatePresence mode="wait">
+              {isPaying && (
+                <motion.div
+                  initial={{ opacity: 0, height: 0 }}
+                  animate={{ opacity: 1, height: "auto" }}
+                  exit={{ opacity: 0, height: 0 }}
+                  className="flex flex-col gap-3 rounded-xl bg-muted p-5"
+                >
+                  {steps.map((step) => {
+                    const stepIndex = steps.findIndex(
+                      (s) => s.key === paymentStep
+                    )
+                    const thisIndex = steps.findIndex(
+                      (s) => s.key === step.key
+                    )
+                    const isActive = step.key === paymentStep
+                    const isDone = thisIndex < stepIndex
+
+                    return (
+                      <div
+                        key={step.key}
+                        className="flex items-center gap-3 text-sm"
+                      >
+                        {isDone ? (
+                          <CheckCircle className="h-5 w-5 shrink-0 text-green-500" />
+                        ) : isActive ? (
+                          <Loader2 className="h-5 w-5 shrink-0 animate-spin" />
+                        ) : (
+                          <div className="h-5 w-5 shrink-0 rounded-full border-2 border-border" />
+                        )}
+                        <span
+                          className={
+                            isActive
+                              ? "font-medium"
+                              : isDone
+                                ? "text-muted-foreground"
+                                : "text-muted-foreground/40"
+                          }
+                        >
+                          {step.label}
+                        </span>
+                      </div>
+                    )
+                  })}
+                </motion.div>
+              )}
+
+              {paymentStep === "done" && (
+                <motion.div
+                  initial={{ opacity: 0, scale: 0.95 }}
+                  animate={{ opacity: 1, scale: 1 }}
+                  className="flex flex-col items-center gap-3 rounded-xl bg-green-50 p-8 dark:bg-green-950/20"
+                >
+                  <ShieldCheck className="h-12 w-12 text-green-500" />
+                  <div className="text-center">
+                    <p className="text-lg font-semibold text-green-700 dark:text-green-400">
+                      Paid privately
+                    </p>
+                    <p className="mt-1 text-sm text-muted-foreground">
+                      No on-chain link between payer and payee
                     </p>
                   </div>
-                ) : (
-                  <Button
-                    className="flex-1"
-                    onClick={handlePay}
-                    disabled={isCrossToken && (!quote || quoteLoading)}
-                  >
-                    <ArrowDownToLine className="mr-2 h-4 w-4" />
-                    {isCrossToken ? "Swap & Pay" : "Pay Now"}
-                  </Button>
-                )}
-              </>
-            )}
-            <Button variant="outline" onClick={copyPaymentLink}>
-              <Copy className="mr-2 h-4 w-4" />
-              Copy Link
-            </Button>
-          </div>
-        </CardContent>
-      </Card>
+                  {(txHash || invoice.txHash) && (
+                    <a
+                      href={`https://sepolia.basescan.org/tx/${txHash || invoice.txHash}`}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="text-sm text-primary underline"
+                    >
+                      View on BaseScan
+                    </a>
+                  )}
+                </motion.div>
+              )}
+            </AnimatePresence>
+
+            <div className="flex flex-col gap-3">
+              {!isPaid && paymentStep === "idle" && (
+                <>
+                  {!isConnected ? (
+                    <div className="flex flex-col items-center gap-3 rounded-xl bg-muted p-6">
+                      <Wallet className="h-8 w-8 text-muted-foreground" />
+                      <p className="text-sm text-muted-foreground">
+                        Connect your wallet to pay this invoice
+                      </p>
+                    </div>
+                  ) : (
+                    <Button
+                      size="lg"
+                      className="w-full"
+                      onClick={handlePay}
+                      disabled={isCrossToken && (!quote || quoteLoading)}
+                    >
+                      <ArrowDownToLine className="mr-2 h-4 w-4" />
+                      {isCrossToken ? "Swap & Pay" : "Pay Now"}
+                    </Button>
+                  )}
+                </>
+              )}
+              {!isPaid && (
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  className="text-muted-foreground"
+                  onClick={copyPaymentLink}
+                >
+                  <Copy className="mr-2 h-3.5 w-3.5" />
+                  Copy payment link
+                </Button>
+              )}
+            </div>
+          </CardContent>
+        </Card>
+
+        <p className="mt-4 text-center text-xs text-muted-foreground">
+          Powered by Unlink&apos;s zero-knowledge privacy pool
+        </p>
+      </motion.div>
     </div>
   )
 }
