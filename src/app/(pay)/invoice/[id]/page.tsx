@@ -39,9 +39,8 @@ const directSteps: { key: PaymentStep; label: string }[] = [
 ]
 
 const swapSteps: { key: PaymentStep; label: string }[] = [
-  { key: "approving", label: "Sending funds to swap agent..." },
-  { key: "signing", label: "Swapping via Uniswap..." },
-  { key: "confirming", label: "Depositing to privacy pool..." },
+  { key: "approving", label: "Sending funds..." },
+  { key: "signing", label: "Swapping & depositing to privacy pool..." },
   { key: "done", label: "Payment complete!" },
 ]
 
@@ -220,7 +219,6 @@ export default function InvoicePage({
 
     setPaymentStep("signing")
 
-    // Step 3: Tell server to execute swap + deposit to freelancer
     const executeRes = await fetch("/api/pay/swap", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
@@ -233,8 +231,6 @@ export default function InvoicePage({
         payerAddress,
       }),
     })
-
-    setPaymentStep("confirming")
 
     if (!executeRes.ok) {
       const data = await executeRes.json()
