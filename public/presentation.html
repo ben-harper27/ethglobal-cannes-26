@@ -1,0 +1,141 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>Cloak — Private Invoicing</title>
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/reveal.js@4/dist/reveal.css">
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/reveal.js@4/dist/theme/black.css">
+    <style>
+        :root {
+            --r-background-color: #09090b;
+            --r-main-color: #fafafa;
+            --r-heading-color: #fafafa;
+            --r-link-color: #a78bfa;
+        }
+        .reveal { font-family: system-ui, -apple-system, sans-serif; }
+        .reveal h1, .reveal h2, .reveal h3 { font-weight: 700; letter-spacing: -0.02em; }
+        .reveal h1 { font-size: 2.8em; }
+        .reveal h2 { font-size: 2em; }
+        .reveal p, .reveal li { font-size: 0.75em; line-height: 1.6; }
+        .reveal .subtitle { color: #a1a1aa; font-size: 0.85em; margin-top: 0.5em; }
+        .reveal .highlight { color: #a78bfa; }
+        .reveal .dim { color: #71717a; }
+        .reveal .tag { display: inline-block; background: #27272a; border-radius: 999px; padding: 0.2em 0.8em; font-size: 0.6em; color: #a1a1aa; margin: 0.2em; }
+        .flow-list { list-style: none; padding: 0; text-align: left; max-width: 550px; margin: 1.5em auto 0; }
+        .flow-list li { display: flex; align-items: baseline; gap: 0.8em; padding: 0.5em 0; font-size: 0.8em; }
+        .flow-list .num { color: #a78bfa; font-weight: 700; font-size: 1em; flex-shrink: 0; }
+        .flow-list .label { font-weight: 600; }
+        .flow-list .dim { color: #a1a1aa; }
+        .flow-arrow { color: #3f3f46; font-size: 1.5em; display: flex; align-items: center; justify-content: center; }
+        .privacy-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 1em; margin-top: 1em; text-align: left; }
+        .privacy-item { background: #18181b; border: 1px solid #27272a; border-radius: 0.8em; padding: 1.2em; }
+        .privacy-item .label { font-size: 0.6em; color: #a78bfa; text-transform: uppercase; letter-spacing: 0.1em; font-weight: 600; }
+        .privacy-item .value { font-size: 0.7em; margin-top: 0.4em; }
+        .tech-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 1em; margin-top: 1.5em; }
+        .tech-item { background: #18181b; border: 1px solid #27272a; border-radius: 0.8em; padding: 1.2em; text-align: center; }
+        .tech-item .name { font-size: 0.8em; font-weight: 700; }
+        .tech-item .role { font-size: 0.55em; color: #a1a1aa; margin-top: 0.3em; }
+        .big-quote { font-size: 1.3em; font-style: italic; color: #d4d4d8; line-height: 1.4; max-width: 700px; margin: 0 auto; text-align: center; }
+        .icon-large { font-size: 3em; margin-bottom: 0.3em; }
+        ul.clean { list-style: none; padding: 0; }
+        ul.clean li { padding: 0.3em 0; font-size: 0.7em; }
+        ul.clean li::before { content: ""; display: inline-block; width: 8px; height: 8px; background: #a78bfa; border-radius: 50%; margin-right: 0.8em; }
+    </style>
+</head>
+<body>
+    <div class="reveal">
+        <div class="slides">
+
+            <!-- Title -->
+            <section>
+                <div class="icon-large">&#128373;</div>
+                <h1>Cloak</h1>
+                <p class="subtitle">Private invoicing for freelancers</p>
+                <p class="dim" style="margin-top: 1.5em; font-size: 0.5em;">ETHGlobal Cannes 2026</p>
+            </section>
+
+            <!-- Problem -->
+            <section>
+                <h2>The Problem</h2>
+                <p class="big-quote" style="text-align: center !important; margin-left: auto !important; margin-right: auto !important;">"Your bank doesn't broadcast your salary to the world. Why does your blockchain?"</p>
+                <div style="margin-top: 1.5em; font-size: 0.7em; color: #a1a1aa; text-align: left; max-width: 500px; margin-left: auto; margin-right: auto; line-height: 1.8;">
+                    <p>Your income becomes visible.</p>
+                    <p>Then your clients become identifiable.</p>
+                    <p>Then your entire financial history is exposed.</p>
+                    <p style="color: #fafafa;">And suddenly, you've lost all negotiating power.</p>
+                </div>
+            </section>
+
+            <!-- Solution -->
+            <section>
+                <h2>The Solution</h2>
+                <p style="font-size: 1em; margin-bottom: 0.5em;">Get paid on-chain.</p>
+                <p style="font-size: 1em;">Without anyone knowing <span class="highlight">who</span>, <span class="highlight">how much</span>, or <span class="highlight">how often</span>.</p>
+                <p class="dim" style="margin-top: 1.5em; font-size: 0.6em;">Zero-knowledge privacy by default. Not opt-in.</p>
+            </section>
+
+            <!-- How it works -->
+            <section>
+                <h2>How It Works</h2>
+                <br>
+                <p><span class="highlight">1.</span> Freelancer creates an invoice and shares a link</p>
+                <p><span class="highlight">2.</span> Client pays with USDC, ETH, or WETH</p>
+                <p><span class="highlight">3.</span> Payment enters Unlink's ZK privacy pool</p>
+                <p><span class="highlight">4.</span> Freelancer withdraws to any wallet — untraceable</p>
+            </section>
+
+            <!-- Demo -->
+            <section data-background-color="#18181b">
+                <h2>Live Demo</h2>
+            </section>
+
+            <!-- Privacy Architecture -->
+            <section>
+                <h2>Privacy Model</h2>
+                <div style="text-align: left; max-width: 550px; margin: 1.5em auto 0; font-size: 0.7em; line-height: 1.8;">
+                    <p><span class="highlight">Stored:</span> Invoice ID, anonymous Unlink address, amount</p>
+                    <p><span class="highlight">Not stored:</span> No wallet addresses. No seeds. No keys.</p>
+                    <p><span class="highlight">On-chain:</span> Payer deposits in. Freelancer withdraws out. No link.</p>
+                    <p><span class="highlight">Recovery:</span> Same wallet signature = same account. Always.</p>
+                </div>
+            </section>
+
+            <!-- Tech Stack -->
+            <section>
+                <h2>Built With</h2>
+                <div style="text-align: left; max-width: 500px; margin: 1.5em auto 0; font-size: 0.75em; line-height: 2;">
+                    <p><strong>Unlink</strong> <span style="color: #a1a1aa;">— ZK privacy pool for deposits, transfers, withdrawals</span></p>
+                    <p><strong>Uniswap V3</strong> <span style="color: #a1a1aa;">— cross-token swaps via SwapRouter02</span></p>
+                    <p><strong>Dynamic</strong> <span style="color: #a1a1aa;">— wallet auth + deterministic account derivation</span></p>
+                </div>
+                <p style="margin-top: 1.5em; font-size: 0.55em; color: #71717a;">
+                    Next.js 15 &nbsp;&bull;&nbsp; Base Sepolia &nbsp;&bull;&nbsp; Turso &nbsp;&bull;&nbsp; Permit2 &nbsp;&bull;&nbsp; viem &nbsp;&bull;&nbsp; shadcn/ui
+                </p>
+            </section>
+
+            <!-- Closing -->
+            <section>
+                <div class="icon-large">&#128373;</div>
+                <h1>Cloak</h1>
+                <p style="font-size: 1em; margin-top: 0.5em;">Because your income is <span class="highlight">nobody's business</span>.</p>
+                <p style="margin-top: 2em; font-size: 0.6em; color: #71717a;">
+                    Unlink &nbsp;&bull;&nbsp; Uniswap &nbsp;&bull;&nbsp; Dynamic
+                </p>
+            </section>
+
+        </div>
+    </div>
+    <script src="https://cdn.jsdelivr.net/npm/reveal.js@4/dist/reveal.js"></script>
+    <script>
+        Reveal.initialize({
+            hash: true,
+            transition: 'fade',
+            transitionSpeed: 'fast',
+            controls: true,
+            progress: true,
+            center: true,
+        });
+    </script>
+</body>
+</html>
