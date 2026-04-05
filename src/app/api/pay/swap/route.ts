@@ -195,7 +195,10 @@ async function handleExecute(body: {
     // Step 1: Wrap ETH keeping gas reserve
     if (isEthInput) {
       const ethBalance = await publicClient.getBalance({ address: burnerAccount.address })
-      const wrapAmount = ethBalance - GAS_RESERVE
+      console.log(`[swap] burner ETH balance: ${ethBalance}, gas reserve: ${GAS_RESERVE}`)
+      // WHY: use half the balance as gas reserve if the fixed reserve is too large
+      const effectiveReserve = ethBalance > GAS_RESERVE * BigInt(2) ? GAS_RESERVE : ethBalance / BigInt(3)
+      const wrapAmount = ethBalance - effectiveReserve
       if (wrapAmount <= BigInt(0)) {
         throw new Error("Insufficient ETH sent — not enough to cover gas")
       }
