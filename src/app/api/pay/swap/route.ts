@@ -347,7 +347,6 @@ async function handleExecute(body: {
     await store.update(invoiceId, {
       status: "paid",
       txId: tx_id,
-      txHash: swapReceipt.transactionHash,
       paidAt: Date.now(),
     })
 

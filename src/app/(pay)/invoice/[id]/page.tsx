@@ -315,9 +315,9 @@ export default function InvoicePage({
                   {invoice.tokenSymbol}
                 </span>
               </p>
-              {isPaid && invoice.txHash && (
+              {isPaid && txHash && (
                 <a
-                  href={`https://sepolia.basescan.org/tx/${invoice.txHash}`}
+                  href={`https://sepolia.basescan.org/tx/${txHash}`}
                   target="_blank"
                   rel="noopener noreferrer"
                   className="mt-3 inline-flex items-center gap-2 rounded-lg border border-border px-4 py-2 text-sm transition-colors hover:bg-muted"
@@ -450,9 +450,9 @@ export default function InvoicePage({
                       No on-chain link between payer and payee
                     </p>
                   </div>
-                  {(txHash || invoice.txHash) && (
+                  {txHash && (
                     <a
-                      href={`https://sepolia.basescan.org/tx/${txHash || invoice.txHash}`}
+                      href={`https://sepolia.basescan.org/tx/${txHash}`}
                       target="_blank"
                       rel="noopener noreferrer"
                       className="text-sm text-primary underline"

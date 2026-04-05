@@ -62,7 +62,6 @@ export async function POST(request: Request) {
     await store.update(invoiceId, {
       status: "paid",
       txId,
-      txHash: txHash || undefined,
       paidAt: Date.now(),
     })
 

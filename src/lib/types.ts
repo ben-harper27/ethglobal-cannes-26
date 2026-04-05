@@ -9,7 +9,6 @@ export interface Invoice {
   amountWei: string
   status: InvoiceStatus
   txId?: string
-  txHash?: string
   createdAt: number
   paidAt?: number
 }
