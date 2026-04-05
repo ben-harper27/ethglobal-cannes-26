@@ -14,6 +14,7 @@ import {
 } from "lucide-react"
 import { toast } from "sonner"
 import { formatUnits, parseUnits } from "viem"
+import { INVOICE_TOKEN } from "@/lib/tokens"
 import { motion, AnimatePresence } from "framer-motion"
 import { useWalletAuth } from "@/hooks/use-wallet-auth"
 
@@ -26,8 +27,12 @@ export default function WithdrawPage() {
   const [isDone, setIsDone] = useState(false)
   const [txId, setTxId] = useState<string | null>(null)
 
-  const currentBalance =
-    balances.length > 0 ? formatUnits(BigInt(balances[0].amount), 6) : "0.00"
+  const usdcBalance = balances.find(
+    (b) => b.token.toLowerCase() === INVOICE_TOKEN.address.toLowerCase()
+  )
+  const currentBalance = usdcBalance
+    ? formatUnits(BigInt(usdcBalance.amount), INVOICE_TOKEN.decimals)
+    : "0.00"
 
   const handleWithdraw = async (e: React.FormEvent) => {
     e.preventDefault()

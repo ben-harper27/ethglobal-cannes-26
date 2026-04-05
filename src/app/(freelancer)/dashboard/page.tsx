@@ -17,6 +17,7 @@ import {
 } from "lucide-react"
 import { cn } from "@/lib/utils"
 import { formatUnits } from "viem"
+import { INVOICE_TOKEN } from "@/lib/tokens"
 import { motion } from "framer-motion"
 
 export default function DashboardPage() {
@@ -49,10 +50,12 @@ export default function DashboardPage() {
     )
   }
 
-  const balance =
-    balances.length > 0
-      ? formatUnits(BigInt(balances[0].amount), 6)
-      : "0.00"
+  const usdcBalance = balances.find(
+    (b) => b.token.toLowerCase() === INVOICE_TOKEN.address.toLowerCase()
+  )
+  const balance = usdcBalance
+    ? formatUnits(BigInt(usdcBalance.amount), INVOICE_TOKEN.decimals)
+    : "0.00"
 
   return (
     <div className="mx-auto max-w-3xl px-4 py-12">
