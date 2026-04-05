@@ -8,7 +8,6 @@ export interface Invoice {
   amount: string
   amountWei: string
   status: InvoiceStatus
-  txId?: string
   createdAt: number
   paidAt?: number
 }

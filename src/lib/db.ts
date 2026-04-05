@@ -26,7 +26,6 @@ export async function initDb() {
       amount TEXT NOT NULL,
       amount_wei TEXT NOT NULL,
       status TEXT NOT NULL DEFAULT 'pending',
-      tx_id TEXT,
       created_at INTEGER NOT NULL,
       paid_at INTEGER
     )`,

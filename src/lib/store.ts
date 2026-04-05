@@ -15,7 +15,6 @@ function rowToInvoice(row: Record<string, unknown>): Invoice {
     amount: row.amount as string,
     amountWei: row.amount_wei as string,
     status: row.status as Invoice["status"],
-    txId: (row.tx_id as string) || undefined,
     createdAt: row.created_at as number,
     paidAt: (row.paid_at as number) || undefined,
   }
@@ -62,7 +61,6 @@ export const store = {
     const args: InValue[] = []
 
     if (patch.status !== undefined) { sets.push("status = ?"); args.push(patch.status) }
-    if (patch.txId !== undefined) { sets.push("tx_id = ?"); args.push(patch.txId) }
     if (patch.paidAt !== undefined) { sets.push("paid_at = ?"); args.push(patch.paidAt) }
 
     if (sets.length === 0) return
