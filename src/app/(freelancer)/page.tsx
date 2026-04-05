@@ -5,7 +5,6 @@ import { buttonVariants } from "@/components/ui/button"
 import {
   EyeOff,
   FileText,
-  Shield,
   ArrowRight,
   Lock,
   Send,
@@ -62,23 +61,13 @@ export default function Home() {
             earnings. Zero-knowledge privacy by default.
           </p>
 
-          <div className="flex gap-3 pt-2">
-            <Link
-              href="/create"
-              className={cn(buttonVariants({ size: "lg" }), "gap-2 px-6")}
-            >
-              Create Invoice
-              <ArrowRight className="h-4 w-4" />
-            </Link>
+          <div className="pt-2">
             <Link
               href="/dashboard"
-              className={cn(
-                buttonVariants({ variant: "outline", size: "lg" }),
-                "gap-2 px-6"
-              )}
+              className={cn(buttonVariants({ size: "lg" }), "gap-2 px-8")}
             >
-              <Shield className="h-4 w-4" />
-              Dashboard
+              Get Started
+              <ArrowRight className="h-4 w-4" />
             </Link>
           </div>
         </motion.div>
